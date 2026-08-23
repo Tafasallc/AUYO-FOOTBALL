@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Radio, Newspaper, Table2, Lock, Plus, Trash2, Clock, MapPin, ChevronRight, Unlock, Target, ChevronDown, Share2 } from "lucide-react";
+import { Radio, Newspaper, Table2, Lock, Plus, Trash2, Clock, MapPin, ChevronRight, Unlock, Target, ChevronDown, Share2, Info } from "lucide-react";
 import { storage, uploadImage } from "./storage";
 
 const C = {
@@ -80,6 +80,156 @@ function Pitch({ children, style }) {
     </div>
   );
 }
+
+function SponsorBanner({ sponsors }) {
+  if (!sponsors || sponsors.length === 0) return null;
+  return (
+    <div style={{ margin: "14px -18px 0", padding: "10px 18px", background: "rgba(255,255,255,0.06)", borderTop: "1px solid rgba(255,255,255,0.1)", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+      <div className="f-mono" style={{ fontSize: 9, letterSpacing: 1.5, color: C.chalk, opacity: 0.45, marginBottom: 8 }}>SPONSORED BY</div>
+      <div style={{ display: "flex", gap: 14, overflowX: "auto", paddingBottom: 2 }}>
+        {sponsors.map((s) => (
+          <button
+            key={s.id}
+            onClick={() => s.url && window.open(s.url, "_blank", "noopener,noreferrer")}
+            style={{ background: C.chalk, border: "none", borderRadius: 10, padding: "6px 10px", display: "flex", alignItems: "center", gap: 8, flexShrink: 0, cursor: s.url ? "pointer" : "default" }}
+          >
+            {s.logoUrl && <img src={s.logoUrl} alt={s.name} style={{ height: 22, maxWidth: 70, objectFit: "contain" }} />}
+            <span className="f-body" style={{ fontSize: 11.5, fontWeight: 600, color: C.soil, whiteSpace: "nowrap" }}>{s.name}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const LEGAL_CONTENT = {
+  about: {
+    label: "About Us",
+    paragraphs: [
+      "Auyo Football is a free, community-built app for following grassroots football competitions in Auyo, Jigawa State — starting with the 77 Sport Competition (Unguwa-Unguwa). We built it to give players, families, and fans one simple place to check live scores, goal scorers, league tables, match commentary, and competition news, without needing anything more than a phone browser.",
+      "Auyo Football is developed and operated by Tafasa LLC. Our goal is straightforward: make it easier for local competitions to reach the people who care about them, and to give small sponsors a genuine way to support the football their communities already love.",
+      "The app is run by volunteers and organizers on the ground — match results, commentary, and news are added by competition administrators in real time, so what you see here is as close to matchday as it gets.",
+    ],
+  },
+  contact: {
+    label: "Contact Us",
+    paragraphs: [
+      "We'd like to hear from you — whether it's a question about a competition, a correction to a result, interest in sponsorship, or feedback on the app itself.",
+    ],
+    fields: [
+      { label: "Company", value: "Tafasa LLC" },
+      { label: "Location", value: "Auyo, Jigawa State, Nigeria" },
+      { label: "Email", value: "Tafasallc@gmail.com" },
+      { label: "Phone / WhatsApp", value: "09125158397" },
+      { label: "Address", value: "No. 6 Auyo Liberia, opposite Auyo local government Education authority secretariat, Jigawa state, Nigeria." },
+    ],
+    closing: "For urgent corrections to a live score or match result, please contact the competition administrator directly if you know them, as this is usually the fastest route.",
+  },
+  privacy: {
+    label: "Privacy Policy",
+    meta: "Last updated: 24 August, 2026",
+    sections: [
+      { heading: null, body: 'This Privacy Policy explains how Tafasa LLC ("we," "us," "our") handles information in connection with the Auyo Football app ("the App"). We\'ve tried to keep this simple, because the App itself is simple: there are no user accounts, and we collect very little information about you.' },
+      { heading: "Information We Collect", bullets: [
+        'Comments you post. If you leave a comment on a news post, we store the comment text and the name you choose to enter (you may enter "Anonymous" or any name you like — we do not verify identity).',
+        "Likes and votes. When you like a news post or vote for Man of the Match, we record that action against your device only, so you don't accidentally vote or like more than once. This is stored locally on your device, not tied to your name or identity.",
+        "Technical information. Like most websites and apps, our hosting and infrastructure providers may automatically log basic technical data (such as IP address and browser type) for security and performance purposes.",
+      ], body: "We do not require or collect your phone number, email address, date of birth, or any government identification to use the App." },
+      { heading: "How We Use Information", body: "We use the information above solely to operate the App: displaying comments and likes, preventing duplicate votes, keeping the App secure, and improving how it works. We do not sell your information, and we do not use it for targeted advertising." },
+      { heading: "Third-Party Services", body: "The App is built using Google Firebase (Firestore and Cloud Storage) to store competition data, comments, and uploaded images, and is hosted via Vercel. These providers may process data on our behalf as part of delivering the App, subject to their own privacy and security practices. We do not share your information with any other third party for their own marketing purposes." },
+      { heading: "Sponsor Links", body: "The App may display sponsor banners. Tapping a sponsor's logo takes you to their own website, which is outside our control. We are not responsible for the privacy practices or content of sponsor websites." },
+      { heading: "Data Retention", body: "Comments, likes, and votes remain associated with the relevant match or news post for as long as that content stays on the App, or until an administrator removes it." },
+      { heading: "Children's Privacy", body: "The App is intended for a general audience and is not specifically directed at children. We do not knowingly collect personal information from children. If you believe a child has submitted a comment containing personal information, please contact us and we will remove it." },
+      { heading: "Your Rights", body: "Under the Nigeria Data Protection Act (NDPA) 2023, you have rights regarding personal data relating to you, including the right to request access to, correction of, or deletion of a comment you've posted. To make such a request, please contact us using the details in the Contact Us section, and reference the specific comment and post." },
+      { heading: "Changes to This Policy", body: 'We may update this Privacy Policy from time to time as the App evolves. We will update the "Last updated" date above when changes are made.' },
+      { heading: "Contact", body: "Questions about this Privacy Policy can be directed to Tafasa LLC using the contact details listed in the Contact Us section." },
+    ],
+  },
+  terms: {
+    label: "Terms & Conditions",
+    meta: "Last updated: 24 August, 2026",
+    sections: [
+      { heading: null, body: 'Please read these Terms & Conditions ("Terms") carefully before using the Auyo Football app ("the App"), operated by Tafasa LLC ("we," "us," "our"). By accessing or using the App, you agree to be bound by these Terms. If you do not agree, please do not use the App.' },
+      { heading: "1. Use of the App", body: "The App provides free access to football competition information, including live scores, goal scorers, league tables, match commentary, news, and related content, for competitions such as the 77 Sport Competition. The App is provided for personal, non-commercial use." },
+      { heading: "2. User-Generated Content", body: "The App allows visitors to post comments and like news posts. By posting a comment, you agree that:", bullets: [
+        "You are responsible for the content you submit.",
+        "You will not post content that is abusive, defamatory, hateful, obscene, threatening, or otherwise unlawful.",
+        "You will not impersonate another person or organization.",
+        "We reserve the right, but not the obligation, to review, moderate, or remove any comment at our sole discretion, without notice.",
+      ] },
+      { heading: "3. Accuracy of Information", body: "Match scores, statistics, commentary, and news are entered by competition administrators, often in real time during live matches. While we and our administrators aim for accuracy, we do not guarantee that all information on the App is complete, current, or error-free. Official results from the relevant football competition authority should be treated as authoritative in the event of any discrepancy." },
+      { heading: "4. Sponsors and Third-Party Links", body: "The App may display sponsor banners and links to third-party websites. These links are provided for convenience only. We do not endorse, and are not responsible for, the content, products, services, or practices of any third-party website linked from the App." },
+      { heading: "5. Intellectual Property", body: "The App's design, branding, and original content are the property of Tafasa LLC unless otherwise stated. Comments and other content submitted by users remain the property of their respective authors, but by posting, you grant us a non-exclusive, royalty-free license to display that content within the App." },
+      { heading: "6. Disclaimer of Warranties", body: 'The App is provided "as is" and "as available," without warranties of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement. We do not guarantee uninterrupted or error-free operation of the App.' },
+      { heading: "7. Limitation of Liability", body: "To the fullest extent permitted by law, Tafasa LLC shall not be liable for any indirect, incidental, special, or consequential damages arising from your use of, or inability to use, the App, including reliance on any information displayed within it." },
+      { heading: "8. Changes to the App or These Terms", body: "We may modify, suspend, or discontinue the App, or any part of it, at any time. We may also update these Terms from time to time; continued use of the App after changes are posted constitutes acceptance of the revised Terms." },
+      { heading: "9. Governing Law", body: "These Terms are governed by the laws of the Federal Republic of Nigeria." },
+      { heading: "10. Contact", body: "Questions about these Terms can be directed to Tafasa LLC using the contact details listed in the Contact Us section." },
+    ],
+  },
+};
+
+function LegalTab() {
+  const [section, setSection] = useState("about");
+  const content = LEGAL_CONTENT[section];
+
+  return (
+    <div style={{ paddingBottom: 90 }}>
+      <div style={{ display: "flex", gap: 6, overflowX: "auto", marginBottom: 16, paddingBottom: 2 }}>
+        {Object.entries(LEGAL_CONTENT).map(([key, val]) => (
+          <button
+            key={key}
+            onClick={() => setSection(key)}
+            style={{
+              flexShrink: 0, border: "none", borderRadius: 999, padding: "7px 13px", fontSize: 12,
+              fontFamily: "'Work Sans', sans-serif", fontWeight: 700, cursor: "pointer",
+              background: section === key ? C.ochre : "rgba(255,255,255,0.1)",
+              color: section === key ? C.chalk : C.chalk,
+              opacity: section === key ? 1 : 0.6,
+            }}
+          >
+            {val.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ background: C.chalk, borderRadius: 14, padding: 18, border: `1px solid ${C.line}` }}>
+        <div className="f-display" style={{ fontSize: 20, color: C.pitch, marginBottom: content.meta ? 4 : 14 }}>{content.label}</div>
+        {content.meta && <div className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.5, marginBottom: 14 }}>{content.meta}</div>}
+
+        {content.paragraphs && content.paragraphs.map((p, i) => (
+          <p key={i} className="f-body" style={{ fontSize: 13, color: C.soil, opacity: 0.85, lineHeight: 1.6, marginBottom: 12 }}>{p}</p>
+        ))}
+
+        {content.fields && (
+          <div style={{ marginBottom: 12 }}>
+            {content.fields.map((f, i) => (
+              <div key={i} className="f-body" style={{ fontSize: 13, color: C.soil, marginBottom: 6 }}>
+                <b>{f.label}:</b> <span style={{ color: f.value.startsWith("[") ? C.rust : C.soil, fontStyle: f.value.startsWith("[") ? "italic" : "normal" }}>{f.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {content.closing && <p className="f-body" style={{ fontSize: 13, color: C.soil, opacity: 0.85, lineHeight: 1.6 }}>{content.closing}</p>}
+
+        {content.sections && content.sections.map((s, i) => (
+          <div key={i} style={{ marginBottom: 14 }}>
+            {s.heading && <div className="f-body" style={{ fontSize: 14, fontWeight: 700, color: C.soil, marginBottom: 6 }}>{s.heading}</div>}
+            {s.bullets && (
+              <ul style={{ margin: "0 0 8px", paddingLeft: 18 }}>
+                {s.bullets.map((b, bi) => (
+                  <li key={bi} className="f-body" style={{ fontSize: 12.5, color: C.soil, opacity: 0.85, lineHeight: 1.6, marginBottom: 4 }}>{b}</li>
+                ))}
+              </ul>
+            )}
+            {s.body && <p className="f-body" style={{ fontSize: 13, color: C.soil, opacity: 0.85, lineHeight: 1.6, margin: 0 }}>{s.body}</p>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 
 function StatusPill({ status }) {
   if (status === "live")
@@ -249,18 +399,26 @@ function NewsTab({ news, setNews, likedPosts, toggleLike }) {
   const [openId, setOpenId] = useState(null);
   const [commentDrafts, setCommentDrafts] = useState({});
   const [nameDraft, setNameDraft] = useState("");
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyDrafts, setReplyDrafts] = useState({});
   const sorted = [...news].sort((a, b) => (a.date < b.date ? 1 : -1));
 
-  const submitComment = (postId) => {
-    const text = (commentDrafts[postId] || "").trim();
+  const submitComment = (postId, parentId) => {
+    const draftKey = parentId ? `reply:${parentId}` : postId;
+    const text = (parentId ? (replyDrafts[parentId] || "") : (commentDrafts[postId] || "")).trim();
     if (!text) return;
     const updated = news.map((n) =>
       n.id === postId
-        ? { ...n, comments: [...(n.comments || []), { id: uid(), name: nameDraft.trim() || "Anonymous", text, date: new Date().toISOString().slice(0, 10) }] }
+        ? { ...n, comments: [...(n.comments || []), { id: uid(), name: nameDraft.trim() || "Anonymous", text, date: new Date().toISOString().slice(0, 10), parentId: parentId || null }] }
         : n
     );
     setNews(updated);
-    setCommentDrafts({ ...commentDrafts, [postId]: "" });
+    if (parentId) {
+      setReplyDrafts({ ...replyDrafts, [parentId]: "" });
+      setReplyingTo(null);
+    } else {
+      setCommentDrafts({ ...commentDrafts, [postId]: "" });
+    }
   };
 
   return (
@@ -270,10 +428,14 @@ function NewsTab({ news, setNews, likedPosts, toggleLike }) {
         const liked = likedPosts.has(n.id);
         const likes = n.likes || 0;
         const comments = n.comments || [];
+        const topLevel = comments.filter((c) => !c.parentId);
+        const repliesTo = (parentId) => comments.filter((c) => c.parentId === parentId);
         return (
           <div key={n.id} style={{ background: C.chalk, borderRadius: 14, overflow: "hidden", border: `1px solid ${C.line}` }}>
             {n.imageUrl && (
-              <img src={n.imageUrl} alt="" style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }} onClick={() => setOpenId(open ? null : n.id)} />
+              <div onClick={() => setOpenId(open ? null : n.id)} style={{ width: "100%", height: 160, overflow: "hidden", background: C.line, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <img src={n.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+              </div>
             )}
             <div style={{ padding: 16 }}>
               <div onClick={() => setOpenId(open ? null : n.id)} style={{ cursor: "pointer" }}>
@@ -301,11 +463,43 @@ function NewsTab({ news, setNews, likedPosts, toggleLike }) {
                 <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginTop: 14, marginBottom: 8, letterSpacing: 0.5 }}>
                   {comments.length > 0 ? `${comments.length} COMMENT${comments.length > 1 ? "S" : ""}` : "COMMENTS"}
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
-                  {comments.map((c) => (
-                    <div key={c.id} style={{ background: C.sand || "#F2E9D8", borderRadius: 10, padding: "8px 10px" }}>
-                      <div className="f-body" style={{ fontSize: 12.5, fontWeight: 700, color: C.soil }}>{c.name}</div>
-                      <div className="f-body" style={{ fontSize: 12.5, color: C.soil, opacity: 0.8, marginTop: 2 }}>{c.text}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
+                  {topLevel.map((c) => (
+                    <div key={c.id}>
+                      <div style={{ background: C.sand || "#F2E9D8", borderRadius: 10, padding: "8px 10px" }}>
+                        <div className="f-body" style={{ fontSize: 12.5, fontWeight: 700, color: C.soil }}>{c.name}</div>
+                        <div className="f-body" style={{ fontSize: 12.5, color: C.soil, opacity: 0.8, marginTop: 2 }}>{c.text}</div>
+                        <button
+                          onClick={() => setReplyingTo(replyingTo === c.id ? null : c.id)}
+                          style={{ background: "none", border: "none", cursor: "pointer", padding: 0, marginTop: 6 }}
+                        >
+                          <span className="f-mono" style={{ fontSize: 10.5, color: C.pitch, fontWeight: 700, letterSpacing: 0.3 }}>REPLY</span>
+                        </button>
+                      </div>
+
+                      {repliesTo(c.id).length > 0 && (
+                        <div style={{ marginLeft: 18, marginTop: 6, display: "flex", flexDirection: "column", gap: 6, borderLeft: `2px solid ${C.line}`, paddingLeft: 10 }}>
+                          {repliesTo(c.id).map((r) => (
+                            <div key={r.id} style={{ background: C.sand || "#F2E9D8", borderRadius: 10, padding: "7px 9px", opacity: 0.92 }}>
+                              <div className="f-body" style={{ fontSize: 12, fontWeight: 700, color: C.soil }}>{r.name}</div>
+                              <div className="f-body" style={{ fontSize: 12, color: C.soil, opacity: 0.8, marginTop: 2 }}>{r.text}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {replyingTo === c.id && (
+                        <div style={{ marginLeft: 18, marginTop: 6, display: "flex", gap: 6 }}>
+                          <input
+                            style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px" }}
+                            placeholder={`Reply to ${c.name}…`}
+                            value={replyDrafts[c.id] || ""}
+                            onChange={(e) => setReplyDrafts({ ...replyDrafts, [c.id]: e.target.value })}
+                            onKeyDown={(e) => { if (e.key === "Enter") submitComment(n.id, c.id); }}
+                          />
+                          <button onClick={() => submitComment(n.id, c.id)} style={{ ...btnStyle(C.pitch, C.chalk), padding: "7px 12px", fontSize: 12 }}>Reply</button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -488,17 +682,41 @@ function ScorerRow({ match, updateMatch }) {
   );
 }
 
+const COMMENTARY_PRESETS = [
+  { label: "⚽ Kickoff", text: "Kickoff! The match is underway." },
+  { label: "⚽ Goal", text: "GOAL!" },
+  { label: "🟨 Yellow", text: "Yellow card shown." },
+  { label: "🟥 Red", text: "Red card! Down to 10 men." },
+  { label: "📐 Corner", text: "Corner kick." },
+  { label: "🔄 Sub", text: "Substitution." },
+  { label: "⏱ Half-time", text: "Half-time whistle blows." },
+  { label: "🏁 Full-time", text: "Full-time! The referee blows the final whistle." },
+];
+
+function estimateMinute(match) {
+  try {
+    const start = new Date(`${match.date}T${match.time}`).getTime();
+    const mins = Math.round((Date.now() - start) / 60000);
+    return Math.min(120, Math.max(0, mins));
+  } catch {
+    return 0;
+  }
+}
+
 function CommentaryRow({ match, updateMatch }) {
-  const [minute, setMinute] = useState("");
+  const [minute, setMinute] = useState(() => String(estimateMinute(match)));
   const [text, setText] = useState("");
   const commentary = match.commentary || [];
 
-  const addEntry = () => {
-    if (!text.trim()) return;
-    const entries = [...commentary, { id: uid(), minute: minute || "0", text: text.trim() }];
+  const addEntry = (overrideText) => {
+    const finalText = (overrideText ?? text).trim();
+    if (!finalText) return;
+    const entries = [...commentary, { id: uid(), minute: minute || "0", text: finalText }];
     updateMatch(match.id, { commentary: entries });
-    setMinute(""); setText("");
+    setText("");
+    setMinute(String(estimateMinute(match)));
   };
+
   const removeEntry = (id) => updateMatch(match.id, { commentary: commentary.filter((c) => c.id !== id) });
 
   return (
@@ -510,10 +728,24 @@ function CommentaryRow({ match, updateMatch }) {
           <button onClick={() => removeEntry(c.id)} style={{ background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}><Trash2 size={12} color={C.rust} /></button>
         </div>
       ))}
-      <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 8, marginBottom: 6 }}>
+        {COMMENTARY_PRESETS.map((p) => (
+          <button
+            key={p.label}
+            onClick={() => addEntry(p.text)}
+            style={{ background: C.sand || "#F2E9D8", border: `1px solid ${C.line}`, borderRadius: 999, padding: "5px 9px", fontSize: 11.5, fontFamily: "'Work Sans', sans-serif", color: C.soil, cursor: "pointer" }}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+      <div className="f-body" style={{ fontSize: 10.5, color: C.soil, opacity: 0.5, marginBottom: 6 }}>Tap a preset to log it instantly, or write your own below.</div>
+
+      <div style={{ display: "flex", gap: 6 }}>
         <input type="number" min={0} max={120} placeholder="Min" style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 50 }} value={minute} onChange={(e) => setMinute(e.target.value)} />
-        <input placeholder="e.g. Goal! Great strike from outside the box" style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px" }} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addEntry(); }} />
-        <button onClick={addEntry} style={{ ...btnStyle(C.pitch, C.chalk), padding: "7px 9px" }}><Plus size={13} /></button>
+        <input placeholder="e.g. Great strike from outside the box" style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px" }} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addEntry(); }} />
+        <button onClick={() => addEntry()} style={{ ...btnStyle(C.pitch, C.chalk), padding: "7px 9px" }}><Plus size={13} /></button>
       </div>
     </div>
   );
@@ -557,7 +789,8 @@ function NewsModerationRow({ post, news, setNews, removeNews }) {
   const [expanded, setExpanded] = useState(false);
   const comments = post.comments || [];
   const removeComment = (commentId) => {
-    const updated = news.map((n) => (n.id === post.id ? { ...n, comments: comments.filter((c) => c.id !== commentId) } : n));
+    const remaining = comments.filter((c) => c.id !== commentId && c.parentId !== commentId);
+    const updated = news.map((n) => (n.id === post.id ? { ...n, comments: remaining } : n));
     setNews(updated);
   };
   return (
@@ -574,8 +807,9 @@ function NewsModerationRow({ post, news, setNews, removeNews }) {
       {expanded && comments.length > 0 && (
         <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
           {comments.map((c) => (
-            <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", background: C.line, opacity: 0.9, borderRadius: 8, padding: "6px 8px" }}>
+            <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", background: C.line, opacity: 0.9, borderRadius: 8, padding: "6px 8px", marginLeft: c.parentId ? 16 : 0 }}>
               <div>
+                {c.parentId && <div className="f-mono" style={{ fontSize: 9, color: C.soil, opacity: 0.5 }}>REPLY</div>}
                 <div className="f-body" style={{ fontSize: 11.5, fontWeight: 700, color: C.soil }}>{c.name}</div>
                 <div className="f-body" style={{ fontSize: 11.5, color: C.soil }}>{c.text}</div>
               </div>
@@ -588,7 +822,7 @@ function NewsModerationRow({ post, news, setNews, removeNews }) {
   );
 }
 
-function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiveCompetitionId, teams, setTeams, matches, setMatches, news, setNews, unlocked, setUnlocked }) {
+function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiveCompetitionId, teams, setTeams, matches, setMatches, news, setNews, sponsors, setSponsors, unlocked, setUnlocked }) {
   const [pin, setPin] = useState("");
   const [pinError, setPinError] = useState(false);
   const [teamName, setTeamName] = useState("");
@@ -607,6 +841,10 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
   const [compName, setCompName] = useState("");
   const [compSubtitle, setCompSubtitle] = useState("");
   const [compHasGroups, setCompHasGroups] = useState(true);
+  const [sponsorName, setSponsorName] = useState("");
+  const [sponsorUrl, setSponsorUrl] = useState("");
+  const [sponsorLogoUrl, setSponsorLogoUrl] = useState("");
+  const [sponsorLogoUploading, setSponsorLogoUploading] = useState(false);
 
   if (!unlocked) {
     return (
@@ -673,6 +911,27 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
       alert("Couldn't upload image — check your connection and Firebase Storage rules.");
     } finally {
       setImageUploading(false);
+    }
+  };
+
+  const addSponsor = () => {
+    if (!sponsorName.trim()) return;
+    setSponsors([...sponsors, { id: uid(), name: sponsorName.trim(), url: sponsorUrl.trim(), logoUrl: sponsorLogoUrl || null }]);
+    setSponsorName(""); setSponsorUrl(""); setSponsorLogoUrl("");
+  };
+  const removeSponsor = (id) => setSponsors(sponsors.filter((s) => s.id !== id));
+  const handleSponsorLogoSelect = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setSponsorLogoUploading(true);
+    try {
+      const url = await uploadImage(file);
+      setSponsorLogoUrl(url);
+    } catch (err) {
+      console.error("Logo upload failed", err);
+      alert("Couldn't upload logo — check your connection and Firebase Storage rules.");
+    } finally {
+      setSponsorLogoUploading(false);
     }
   };
 
@@ -836,6 +1095,39 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
           </div>
         </div>
       </div>
+
+      <div>
+        <div className="f-mono" style={{ fontSize: 11, letterSpacing: 2, color: C.ochre, marginBottom: 10, fontWeight: 700 }}>SPONSORS</div>
+        <div style={{ background: C.chalk, borderRadius: 14, padding: 14, border: `1px solid ${C.line}` }}>
+          {sponsors.map((s) => (
+            <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: `1px solid ${C.line}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {s.logoUrl && <img src={s.logoUrl} alt="" style={{ width: 30, height: 30, objectFit: "contain", borderRadius: 6 }} />}
+                <div>
+                  <div className="f-body" style={{ fontSize: 13, fontWeight: 600, color: C.soil }}>{s.name}</div>
+                  {s.url && <div className="f-mono" style={{ fontSize: 10, color: C.soil, opacity: 0.5 }}>{s.url}</div>}
+                </div>
+              </div>
+              <button onClick={() => removeSponsor(s.id)} style={{ background: "none", border: "none", cursor: "pointer" }}><Trash2 size={14} color={C.rust} /></button>
+            </div>
+          ))}
+          <div style={{ marginTop: 10 }}>
+            <Field label="Sponsor name"><input style={inputStyle} placeholder="e.g. Kuliya Stores" value={sponsorName} onChange={(e) => setSponsorName(e.target.value)} /></Field>
+            <Field label="Website / page to open on tap (optional)"><input style={inputStyle} placeholder="https://..." value={sponsorUrl} onChange={(e) => setSponsorUrl(e.target.value)} /></Field>
+            <Field label="Logo (optional)">
+              <input type="file" accept="image/*" onChange={handleSponsorLogoSelect} style={{ ...inputStyle, padding: "7px 9px" }} />
+              {sponsorLogoUploading && <div className="f-mono" style={{ fontSize: 11, color: C.soil, opacity: 0.6, marginTop: 6 }}>Uploading…</div>}
+              {sponsorLogoUrl && !sponsorLogoUploading && (
+                <div style={{ marginTop: 8, position: "relative", display: "inline-block" }}>
+                  <img src={sponsorLogoUrl} alt="" style={{ width: 60, height: 60, objectFit: "contain", borderRadius: 8, border: `1px solid ${C.line}`, background: C.sand || "#F2E9D8" }} />
+                  <button onClick={() => setSponsorLogoUrl("")} style={{ position: "absolute", top: -6, right: -6, background: C.rust, border: "none", borderRadius: 999, width: 18, height: 18, color: C.chalk, cursor: "pointer", fontSize: 11, lineHeight: 1 }}>×</button>
+                </div>
+              )}
+            </Field>
+            <button onClick={addSponsor} style={btnStyle(C.ochre, C.chalk)}><Plus size={14} /> Add sponsor</button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -845,6 +1137,7 @@ export default function AuyoFootballApp() {
   const [teams, setTeamsState] = useState([]);
   const [matches, setMatchesState] = useState([]);
   const [news, setNewsState] = useState([]);
+  const [sponsors, setSponsorsState] = useState([]);
   const [activeCompetitionId, setActiveCompetitionId] = useState("");
   const [tab, setTab] = useState("scores");
   const [unlocked, setUnlocked] = useState(false);
@@ -879,7 +1172,9 @@ export default function AuyoFootballApp() {
         if (!m) { m = seedMatches(comps[0].id, t); await saveKey("auyo-matches", m); }
         let n = await loadKey("auyo-news");
         if (!n) { n = seedNews(); await saveKey("auyo-news", n); }
-        setCompetitionsState(comps); setTeamsState(t); setMatchesState(m); setNewsState(n);
+        let sp = await loadKey("auyo-sponsors");
+        if (!sp) sp = [];
+        setCompetitionsState(comps); setTeamsState(t); setMatchesState(m); setNewsState(n); setSponsorsState(sp);
         setActiveCompetitionId(comps[0]?.id || "");
         setLoading(false);
       } catch (e) {
@@ -903,6 +1198,7 @@ export default function AuyoFootballApp() {
   const setTeams = useCallback((v) => { setTeamsState(v); safeSave("auyo-teams", v); }, [safeSave]);
   const setMatches = useCallback((v) => { setMatchesState(v); safeSave("auyo-matches", v); }, [safeSave]);
   const setNews = useCallback((v) => { setNewsState(v); safeSave("auyo-news", v); }, [safeSave]);
+  const setSponsors = useCallback((v) => { setSponsorsState(v); safeSave("auyo-sponsors", v); }, [safeSave]);
 
   const toggleLike = useCallback((postId) => {
     setLikedPostsState((prevLiked) => {
@@ -976,12 +1272,17 @@ export default function AuyoFootballApp() {
               <div className="f-mono" style={{ fontSize: 10.5, color: C.ochre, letterSpacing: 3, marginBottom: 4 }}>FOOTBALL UPDATES</div>
               <div className="f-display" onClick={handleTitleTap} style={{ fontSize: 32, color: C.chalk, letterSpacing: 0.5, lineHeight: 1, userSelect: "none" }}>AUYO FOOTBALL</div>
             </div>
-            {liveCount > 0 && (
-              <div className="f-mono" style={{ background: C.rust, color: C.chalk, fontSize: 11, padding: "5px 10px", borderRadius: 999, display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 6, height: 6, borderRadius: 999, background: C.chalk }} />
-                {liveCount} LIVE
-              </div>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {liveCount > 0 && (
+                <div className="f-mono" style={{ background: C.rust, color: C.chalk, fontSize: 11, padding: "5px 10px", borderRadius: 999, display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: 999, background: C.chalk }} />
+                  {liveCount} LIVE
+                </div>
+              )}
+              <button onClick={() => setTab("legal")} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 999, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                <Info size={15} color={C.chalk} style={{ opacity: 0.8 }} />
+              </button>
+            </div>
           </div>
 
           {competitions.length > 0 && (
@@ -1019,6 +1320,8 @@ export default function AuyoFootballApp() {
             </div>
           )}
 
+          <SponsorBanner sponsors={sponsors} />
+
           <div style={{ marginTop: 20 }}>
             {saveError && (
               <div className="f-body" style={{ background: C.rust, color: C.chalk, fontSize: 12, padding: "8px 12px", borderRadius: 10, marginBottom: 12, textAlign: "center" }}>
@@ -1037,6 +1340,7 @@ export default function AuyoFootballApp() {
                 {tab === "scorers" && <ScorersTab matches={compMatches} teamName={teamName} />}
                 {tab === "table" && <TableTab competition={activeCompetition} teams={compTeams} matches={compMatches} />}
                 {tab === "news" && <NewsTab news={news} setNews={setNews} likedPosts={likedPosts} toggleLike={toggleLike} />}
+                {tab === "legal" && <LegalTab />}
                 {tab === "admin" && isAdminAccess && (
                   <AdminTab
                     competitions={competitions} setCompetitions={setCompetitions}
@@ -1044,6 +1348,7 @@ export default function AuyoFootballApp() {
                     teams={teams} setTeams={setTeams}
                     matches={matches} setMatches={setMatches}
                     news={news} setNews={setNews}
+                    sponsors={sponsors} setSponsors={setSponsors}
                     unlocked={unlocked} setUnlocked={setUnlocked}
                   />
                 )}
