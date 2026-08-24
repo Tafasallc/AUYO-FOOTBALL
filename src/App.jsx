@@ -81,6 +81,42 @@ function Pitch({ children, style }) {
   );
 }
 
+function AdBanner({ ads }) {
+  const [index, setIndex] = useState(0);
+  const activeAds = ads || [];
+
+  useEffect(() => {
+    if (activeAds.length <= 1) return;
+    const timer = setInterval(() => {
+      setIndex((i) => (i + 1) % activeAds.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [activeAds.length]);
+
+  if (activeAds.length === 0) return null;
+  const ad = activeAds[index % activeAds.length];
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      <div className="f-mono" style={{ fontSize: 9, letterSpacing: 1.5, color: C.chalk, opacity: 0.45, marginBottom: 8 }}>ADVERTISEMENT</div>
+      <div
+        onClick={() => ad.url && window.open(ad.url, "_blank", "noopener,noreferrer")}
+        style={{ width: "100%", height: 150, borderRadius: 12, overflow: "hidden", background: C.chalk, position: "relative", cursor: ad.url ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center" }}
+      >
+        {ad.imageUrl && <img src={ad.imageUrl} alt={ad.businessName || "Advertisement"} style={{ width: "100%", height: "100%", objectFit: "contain" }} />}
+        <span className="f-mono" style={{ position: "absolute", top: 6, right: 8, fontSize: 8.5, color: C.soil, opacity: 0.4, letterSpacing: 0.5 }}>AD</span>
+      </div>
+      {activeAds.length > 1 && (
+        <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 6 }}>
+          {activeAds.map((_, i) => (
+            <span key={i} style={{ width: 5, height: 5, borderRadius: 999, background: i === index % activeAds.length ? C.ochre : "rgba(255,255,255,0.25)" }} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SponsorBanner({ sponsors }) {
   if (!sponsors || sponsors.length === 0) return null;
   return (
@@ -106,7 +142,7 @@ const LEGAL_CONTENT = {
   about: {
     label: "About Us",
     paragraphs: [
-      "Auyo Football is a free, community-built app for following grassroots football competitions in Auyo, Jigawa State — starting with the 77 Sport Competition (Unguwa-Unguwa). We built it to give players, families, and fans one simple place to check live scores, goal scorers, league tables, match commentary, and competition news, without needing anything more than a phone browser.",
+      "Auyo Football is a free, community-built app for following grassroots football competitions in Auyo, Jigawa State and beyond.",
       "Auyo Football is developed and operated by Tafasa LLC. Our goal is straightforward: make it easier for local competitions to reach the people who care about them, and to give small sponsors a genuine way to support the football their communities already love.",
       "The app is run by volunteers and organizers on the ground — match results, commentary, and news are added by competition administrators in real time, so what you see here is as close to matchday as it gets.",
     ],
@@ -136,7 +172,6 @@ const LEGAL_CONTENT = {
         "Technical information. Like most websites and apps, our hosting and infrastructure providers may automatically log basic technical data (such as IP address and browser type) for security and performance purposes.",
       ], body: "We do not require or collect your phone number, email address, date of birth, or any government identification to use the App." },
       { heading: "How We Use Information", body: "We use the information above solely to operate the App: displaying comments and likes, preventing duplicate votes, keeping the App secure, and improving how it works. We do not sell your information, and we do not use it for targeted advertising." },
-      { heading: "Third-Party Services", body: "The App is built using Google Firebase (Firestore and Cloud Storage) to store competition data, comments, and uploaded images, and is hosted via Vercel. These providers may process data on our behalf as part of delivering the App, subject to their own privacy and security practices. We do not share your information with any other third party for their own marketing purposes." },
       { heading: "Sponsor Links", body: "The App may display sponsor banners. Tapping a sponsor's logo takes you to their own website, which is outside our control. We are not responsible for the privacy practices or content of sponsor websites." },
       { heading: "Data Retention", body: "Comments, likes, and votes remain associated with the relevant match or news post for as long as that content stays on the App, or until an administrator removes it." },
       { heading: "Children's Privacy", body: "The App is intended for a general audience and is not specifically directed at children. We do not knowingly collect personal information from children. If you believe a child has submitted a comment containing personal information, please contact us and we will remove it." },
@@ -169,12 +204,20 @@ const LEGAL_CONTENT = {
   },
 };
 
-function LegalTab() {
+function LegalTab({ onClose }) {
   const [section, setSection] = useState("about");
   const content = LEGAL_CONTENT[section];
 
   return (
     <div style={{ paddingBottom: 90 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+        <button
+          onClick={onClose}
+          style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 999, padding: "6px 12px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer" }}
+        >
+          <span className="f-body" style={{ fontSize: 12, fontWeight: 700, color: C.chalk }}>✕ Close</span>
+        </button>
+      </div>
       <div style={{ display: "flex", gap: 6, overflowX: "auto", marginBottom: 16, paddingBottom: 2 }}>
         {Object.entries(LEGAL_CONTENT).map(([key, val]) => (
           <button
@@ -822,7 +865,7 @@ function NewsModerationRow({ post, news, setNews, removeNews }) {
   );
 }
 
-function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiveCompetitionId, teams, setTeams, matches, setMatches, news, setNews, sponsors, setSponsors, unlocked, setUnlocked }) {
+function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiveCompetitionId, teams, setTeams, matches, setMatches, news, setNews, sponsors, setSponsors, ads, setAds, unlocked, setUnlocked }) {
   const [pin, setPin] = useState("");
   const [pinError, setPinError] = useState(false);
   const [teamName, setTeamName] = useState("");
@@ -845,6 +888,10 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
   const [sponsorUrl, setSponsorUrl] = useState("");
   const [sponsorLogoUrl, setSponsorLogoUrl] = useState("");
   const [sponsorLogoUploading, setSponsorLogoUploading] = useState(false);
+  const [adBusinessName, setAdBusinessName] = useState("");
+  const [adUrl, setAdUrl] = useState("");
+  const [adImageUrl, setAdImageUrl] = useState("");
+  const [adImageUploading, setAdImageUploading] = useState(false);
 
   if (!unlocked) {
     return (
@@ -932,6 +979,27 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
       alert("Couldn't upload logo — check your connection and Firebase Storage rules.");
     } finally {
       setSponsorLogoUploading(false);
+    }
+  };
+
+  const addAd = () => {
+    if (!adImageUrl) return;
+    setAds([...ads, { id: uid(), businessName: adBusinessName.trim(), url: adUrl.trim(), imageUrl: adImageUrl }]);
+    setAdBusinessName(""); setAdUrl(""); setAdImageUrl("");
+  };
+  const removeAd = (id) => setAds(ads.filter((a) => a.id !== id));
+  const handleAdImageSelect = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setAdImageUploading(true);
+    try {
+      const url = await uploadImage(file);
+      setAdImageUrl(url);
+    } catch (err) {
+      console.error("Ad image upload failed", err);
+      alert("Couldn't upload image — check your connection and Firebase Storage rules.");
+    } finally {
+      setAdImageUploading(false);
     }
   };
 
@@ -1128,6 +1196,42 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
           </div>
         </div>
       </div>
+
+      <div>
+        <div className="f-mono" style={{ fontSize: 11, letterSpacing: 2, color: C.ochre, marginBottom: 10, fontWeight: 700 }}>ADVERTISEMENTS</div>
+        <div style={{ background: C.chalk, borderRadius: 14, padding: 14, border: `1px solid ${C.line}` }}>
+          <div className="f-body" style={{ fontSize: 11.5, color: C.soil, opacity: 0.6, marginBottom: 10, lineHeight: 1.4 }}>
+            Big rotating banner shown at the top of the app. Upload a poster/flyer-style image — full-width, landscape works best.
+          </div>
+          {ads.map((a) => (
+            <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: `1px solid ${C.line}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {a.imageUrl && <img src={a.imageUrl} alt="" style={{ width: 44, height: 30, objectFit: "cover", borderRadius: 6 }} />}
+                <div>
+                  <div className="f-body" style={{ fontSize: 13, fontWeight: 600, color: C.soil }}>{a.businessName || "(no name)"}</div>
+                  {a.url && <div className="f-mono" style={{ fontSize: 10, color: C.soil, opacity: 0.5 }}>{a.url}</div>}
+                </div>
+              </div>
+              <button onClick={() => removeAd(a.id)} style={{ background: "none", border: "none", cursor: "pointer" }}><Trash2 size={14} color={C.rust} /></button>
+            </div>
+          ))}
+          <div style={{ marginTop: 10 }}>
+            <Field label="Business name"><input style={inputStyle} placeholder="e.g. Kuliya Stores" value={adBusinessName} onChange={(e) => setAdBusinessName(e.target.value)} /></Field>
+            <Field label="Website / page to open on tap (optional)"><input style={inputStyle} placeholder="https://..." value={adUrl} onChange={(e) => setAdUrl(e.target.value)} /></Field>
+            <Field label="Ad image">
+              <input type="file" accept="image/*" onChange={handleAdImageSelect} style={{ ...inputStyle, padding: "7px 9px" }} />
+              {adImageUploading && <div className="f-mono" style={{ fontSize: 11, color: C.soil, opacity: 0.6, marginTop: 6 }}>Uploading…</div>}
+              {adImageUrl && !adImageUploading && (
+                <div style={{ marginTop: 8, position: "relative", display: "inline-block" }}>
+                  <img src={adImageUrl} alt="" style={{ width: 140, height: 60, objectFit: "contain", borderRadius: 8, border: `1px solid ${C.line}`, background: C.sand || "#F2E9D8" }} />
+                  <button onClick={() => setAdImageUrl("")} style={{ position: "absolute", top: -6, right: -6, background: C.rust, border: "none", borderRadius: 999, width: 18, height: 18, color: C.chalk, cursor: "pointer", fontSize: 11, lineHeight: 1 }}>×</button>
+                </div>
+              )}
+            </Field>
+            <button onClick={addAd} style={btnStyle(C.ochre, C.chalk)}><Plus size={14} /> Add advertisement</button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1138,8 +1242,10 @@ export default function AuyoFootballApp() {
   const [matches, setMatchesState] = useState([]);
   const [news, setNewsState] = useState([]);
   const [sponsors, setSponsorsState] = useState([]);
+  const [ads, setAdsState] = useState([]);
   const [activeCompetitionId, setActiveCompetitionId] = useState("");
   const [tab, setTab] = useState("scores");
+  const [previousTab, setPreviousTab] = useState("scores");
   const [unlocked, setUnlocked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -1174,7 +1280,9 @@ export default function AuyoFootballApp() {
         if (!n) { n = seedNews(); await saveKey("auyo-news", n); }
         let sp = await loadKey("auyo-sponsors");
         if (!sp) sp = [];
-        setCompetitionsState(comps); setTeamsState(t); setMatchesState(m); setNewsState(n); setSponsorsState(sp);
+        let ad = await loadKey("auyo-ads");
+        if (!ad) ad = [];
+        setCompetitionsState(comps); setTeamsState(t); setMatchesState(m); setNewsState(n); setSponsorsState(sp); setAdsState(ad);
         setActiveCompetitionId(comps[0]?.id || "");
         setLoading(false);
       } catch (e) {
@@ -1199,6 +1307,7 @@ export default function AuyoFootballApp() {
   const setMatches = useCallback((v) => { setMatchesState(v); safeSave("auyo-matches", v); }, [safeSave]);
   const setNews = useCallback((v) => { setNewsState(v); safeSave("auyo-news", v); }, [safeSave]);
   const setSponsors = useCallback((v) => { setSponsorsState(v); safeSave("auyo-sponsors", v); }, [safeSave]);
+  const setAds = useCallback((v) => { setAdsState(v); safeSave("auyo-ads", v); }, [safeSave]);
 
   const toggleLike = useCallback((postId) => {
     setLikedPostsState((prevLiked) => {
@@ -1279,7 +1388,7 @@ export default function AuyoFootballApp() {
                   {liveCount} LIVE
                 </div>
               )}
-              <button onClick={() => setTab("legal")} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 999, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <button onClick={() => { setPreviousTab(tab); setTab("legal"); }} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 999, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
                 <Info size={15} color={C.chalk} style={{ opacity: 0.8 }} />
               </button>
             </div>
@@ -1320,6 +1429,7 @@ export default function AuyoFootballApp() {
             </div>
           )}
 
+          <AdBanner ads={ads} />
           <SponsorBanner sponsors={sponsors} />
 
           <div style={{ marginTop: 20 }}>
@@ -1340,7 +1450,7 @@ export default function AuyoFootballApp() {
                 {tab === "scorers" && <ScorersTab matches={compMatches} teamName={teamName} />}
                 {tab === "table" && <TableTab competition={activeCompetition} teams={compTeams} matches={compMatches} />}
                 {tab === "news" && <NewsTab news={news} setNews={setNews} likedPosts={likedPosts} toggleLike={toggleLike} />}
-                {tab === "legal" && <LegalTab />}
+                {tab === "legal" && <LegalTab onClose={() => setTab(previousTab)} />}
                 {tab === "admin" && isAdminAccess && (
                   <AdminTab
                     competitions={competitions} setCompetitions={setCompetitions}
@@ -1349,6 +1459,7 @@ export default function AuyoFootballApp() {
                     matches={matches} setMatches={setMatches}
                     news={news} setNews={setNews}
                     sponsors={sponsors} setSponsors={setSponsors}
+                    ads={ads} setAds={setAds}
                     unlocked={unlocked} setUnlocked={setUnlocked}
                   />
                 )}
