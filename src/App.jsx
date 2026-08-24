@@ -895,7 +895,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
 
   if (!unlocked) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 60, gap: 14 }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 60, gap: 14, paddingBottom: 90 }}>
         <Lock size={26} color={C.chalk} style={{ opacity: 0.8 }} />
         <div className="f-body" style={{ color: C.chalk, opacity: 0.75, fontSize: 13, textAlign: "center", maxWidth: 220 }}>Enter the organizer PIN to manage competitions, scores and news.</div>
         <input type="password" value={pin} onChange={(e) => { setPin(e.target.value); setPinError(false); }} style={{ ...inputStyle, width: 200, textAlign: "center", letterSpacing: 2 }} maxLength={20} placeholder="Organizer password" />
