@@ -13,7 +13,6 @@ const C = {
 };
 
 const FONTS = `
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
 .f-display { font-family: 'Anton', sans-serif; }
 .f-body { font-family: 'Work Sans', sans-serif; }
 .f-mono { font-family: 'JetBrains Mono', monospace; }
@@ -85,6 +84,18 @@ function AdBanner({ ads }) {
   const [index, setIndex] = useState(0);
   const activeAds = ads || [];
 
+  // Preload every ad's image as soon as we have the list, so rotating
+  // between them is instant instead of triggering a fresh download
+  // (and a blank flash) every time the banner switches.
+  useEffect(() => {
+    activeAds.forEach((ad) => {
+      if (ad.imageUrl) {
+        const preload = new window.Image();
+        preload.src = ad.imageUrl;
+      }
+    });
+  }, [activeAds]);
+
   useEffect(() => {
     if (activeAds.length <= 1) return;
     const timer = setInterval(() => {
@@ -103,7 +114,7 @@ function AdBanner({ ads }) {
         onClick={() => ad.url && window.open(ad.url, "_blank", "noopener,noreferrer")}
         style={{ width: "100%", height: 150, borderRadius: 12, overflow: "hidden", background: C.chalk, position: "relative", cursor: ad.url ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center" }}
       >
-        {ad.imageUrl && <img src={ad.imageUrl} alt={ad.businessName || "Advertisement"} style={{ width: "100%", height: "100%", objectFit: "contain" }} />}
+        {ad.imageUrl && <img src={ad.imageUrl} alt={ad.businessName || "Advertisement"} decoding="async" style={{ width: "100%", height: "100%", objectFit: "contain" }} />}
         <span className="f-mono" style={{ position: "absolute", top: 6, right: 8, fontSize: 8.5, color: C.soil, opacity: 0.4, letterSpacing: 0.5 }}>AD</span>
       </div>
       {activeAds.length > 1 && (
@@ -129,7 +140,7 @@ function SponsorBanner({ sponsors }) {
             onClick={() => s.url && window.open(s.url, "_blank", "noopener,noreferrer")}
             style={{ background: C.chalk, border: "none", borderRadius: 10, padding: "6px 10px", display: "flex", alignItems: "center", gap: 8, flexShrink: 0, cursor: s.url ? "pointer" : "default" }}
           >
-            {s.logoUrl && <img src={s.logoUrl} alt={s.name} style={{ height: 22, maxWidth: 70, objectFit: "contain" }} />}
+            {s.logoUrl && <img src={s.logoUrl} alt={s.name} decoding="async" style={{ height: 22, maxWidth: 70, objectFit: "contain" }} />}
             <span className="f-body" style={{ fontSize: 11.5, fontWeight: 600, color: C.soil, whiteSpace: "nowrap" }}>{s.name}</span>
           </button>
         ))}
