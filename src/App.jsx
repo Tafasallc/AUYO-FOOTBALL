@@ -973,7 +973,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
   };
 
   const addSponsor = () => {
-    if (!sponsorName.trim()) return;
+    if (!sponsorName.trim() || sponsorLogoUploading) return;
     setSponsors([...sponsors, { id: uid(), name: sponsorName.trim(), url: sponsorUrl.trim(), logoUrl: sponsorLogoUrl || null }]);
     setSponsorName(""); setSponsorUrl(""); setSponsorLogoUrl("");
   };
@@ -1203,7 +1203,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
                 </div>
               )}
             </Field>
-            <button onClick={addSponsor} style={btnStyle(C.ochre, C.chalk)}><Plus size={14} /> Add sponsor</button>
+            <button onClick={addSponsor} disabled={sponsorLogoUploading} style={{ ...btnStyle(C.ochre, C.chalk), opacity: sponsorLogoUploading ? 0.5 : 1, cursor: sponsorLogoUploading ? "not-allowed" : "pointer" }}><Plus size={14} /> {sponsorLogoUploading ? "Uploading logo…" : "Add sponsor"}</button>
           </div>
         </div>
       </div>
@@ -1239,7 +1239,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
                 </div>
               )}
             </Field>
-            <button onClick={addAd} style={btnStyle(C.ochre, C.chalk)}><Plus size={14} /> Add advertisement</button>
+            <button onClick={addAd} disabled={adImageUploading} style={{ ...btnStyle(C.ochre, C.chalk), opacity: adImageUploading ? 0.5 : 1, cursor: adImageUploading ? "not-allowed" : "pointer" }}><Plus size={14} /> {adImageUploading ? "Uploading image…" : "Add advertisement"}</button>
           </div>
         </div>
       </div>
