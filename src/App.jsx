@@ -1666,4 +1666,266 @@ export default function AuyoFootballApp() {
   const [players, setPlayersState] = useState([]);
   const [activeCompetitionId, setActiveCompetitionId] = useState("");
   const [tab, setTab] = useState("scores");
-  const [previousTab, setPreviousTab] = useState("scores
+  const [previousTab, setPreviousTab] = useState("scores");
+  const [selectedTeamId, setSelectedTeamId] = useState(null);
+  const [unlocked, setUnlocked] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [likedPosts, setLikedPostsState] = useState(() => {
+    try {
+      const raw = localStorage.getItem("auyo-liked-posts");
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set();
+    }
+  });
+  const [votedMatches, setVotedMatches] = useState(() => {
+    try {
+      const raw = localStorage.getItem("auyo-voted-matches");
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set();
+    }
+  });
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        let comps = await loadKey("auyo-competitions");
+        if (!comps) { comps = seedCompetitions(); await saveKey("auyo-competitions", comps); }
+        let t = await loadKey("auyo-teams");
+        if (!t) { t = seedTeams(comps[0].id); await saveKey("auyo-teams", t); }
+        let m = await loadKey("auyo-matches");
+        if (!m) { m = seedMatches(comps[0].id, t); await saveKey("auyo-matches", m); }
+        let n = await loadKey("auyo-news");
+        if (!n) { n = seedNews(); await saveKey("auyo-news", n); }
+        let sp = await loadKey("auyo-sponsors");
+        if (!sp) sp = [];
+        let ad = await loadKey("auyo-ads");
+        if (!ad) ad = [];
+        let pl = await loadKey("auyo-players");
+        if (!pl) pl = [];
+        setCompetitionsState(comps); setTeamsState(t); setMatchesState(m); setNewsState(n); setSponsorsState(sp); setAdsState(ad); setPlayersState(pl);
+        setActiveCompetitionId(comps[0]?.id || "");
+        setLoading(false);
+      } catch (e) {
+        console.error("Failed to load data", e);
+        setLoadError(true);
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const [saveError, setSaveError] = useState(false);
+  const safeSave = useCallback((key, value) => {
+    saveKey(key, value).catch((e) => {
+      console.error("save failed", key, e);
+      setSaveError(true);
+      setTimeout(() => setSaveError(false), 6000);
+    });
+  }, []);
+
+  const setCompetitions = useCallback((v) => { setCompetitionsState(v); safeSave("auyo-competitions", v); }, [safeSave]);
+  const setTeams = useCallback((v) => { setTeamsState(v); safeSave("auyo-teams", v); }, [safeSave]);
+  const setMatches = useCallback((v) => { setMatchesState(v); safeSave("auyo-matches", v); }, [safeSave]);
+  const setNews = useCallback((v) => { setNewsState(v); safeSave("auyo-news", v); }, [safeSave]);
+  const setSponsors = useCallback((v) => { setSponsorsState(v); safeSave("auyo-sponsors", v); }, [safeSave]);
+  const setAds = useCallback((v) => { setAdsState(v); safeSave("auyo-ads", v); }, [safeSave]);
+  const setPlayers = useCallback((v) => { setPlayersState(v); safeSave("auyo-players", v); }, [safeSave]);
+
+  const toggleLike = useCallback((postId) => {
+    setLikedPostsState((prevLiked) => {
+      const already = prevLiked.has(postId);
+      const nextLiked = new Set(prevLiked);
+      already ? nextLiked.delete(postId) : nextLiked.add(postId);
+      try { localStorage.setItem("auyo-liked-posts", JSON.stringify([...nextLiked])); } catch {}
+      setNewsState((prevNews) => {
+        const updated = prevNews.map((n) => (n.id === postId ? { ...n, likes: Math.max(0, (n.likes || 0) + (already ? -1 : 1)) } : n));
+        safeSave("auyo-news", updated);
+        return updated;
+      });
+      return nextLiked;
+    });
+  }, [safeSave]);
+
+  const onVote = useCallback((matchId, candidateId) => {
+    setVotedMatches((prevVoted) => {
+      if (prevVoted.has(matchId)) return prevVoted;
+      const nextVoted = new Set(prevVoted).add(matchId);
+      try { localStorage.setItem("auyo-voted-matches", JSON.stringify([...nextVoted])); } catch {}
+      setMatchesState((prevMatches) => {
+        const updated = prevMatches.map((m) => {
+          if (m.id !== matchId) return m;
+          const motm = m.motm || { candidates: [], votes: {} };
+          const votes = { ...motm.votes, [candidateId]: (motm.votes[candidateId] || 0) + 1 };
+          return { ...m, motm: { ...motm, votes } };
+        });
+        safeSave("auyo-matches", updated);
+        return updated;
+      });
+      return nextVoted;
+    });
+  }, [safeSave]);
+
+  const activeCompetition = competitions.find((c) => c.id === activeCompetitionId);
+  const compTeams = teams.filter((t) => t.competitionId === activeCompetitionId);
+  const compMatches = matches.filter((m) => m.competitionId === activeCompetitionId);
+  const teamName = (id) => teams.find((t) => t.id === id)?.name || "TBD";
+  const teamGroup = (id) => teams.find((t) => t.id === id)?.group || "";
+  const liveCount = compMatches.filter((m) => m.status === "live").length;
+
+  const [secretTaps, setSecretTaps] = useState({ count: 0, last: 0 });
+  const [secretUnlocked, setSecretUnlocked] = useState(false);
+  const handleTitleTap = () => {
+    const now = Date.now();
+    setSecretTaps((prev) => {
+      const withinWindow = now - prev.last < 2000;
+      const count = withinWindow ? prev.count + 1 : 1;
+      if (count >= 7) setSecretUnlocked(true);
+      return { count, last: now };
+    });
+  };
+  const isAdminAccess = secretUnlocked || (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("admin") === "1");
+
+  const tabs = [
+    { key: "scores", label: "Matches", icon: Radio },
+    { key: "scorers", label: "Scorers", icon: Target },
+    { key: "table", label: "Table", icon: Table2 },
+    { key: "teams", label: "Teams", icon: Users },
+    { key: "news", label: "News", icon: Newspaper },
+    ...(isAdminAccess ? [{ key: "admin", label: "Admin", icon: Lock }] : []),
+  ];
+
+  return (
+    <div style={{ minHeight: "100vh", background: C.pitchDark, display: "flex", justifyContent: "center" }}>
+      <style>{FONTS}</style>
+      <div style={{ width: "100%", maxWidth: 430, position: "relative" }}>
+        <Pitch style={{ background: `linear-gradient(180deg, ${C.pitch} 0%, ${C.pitchDark} 260px)`, padding: "26px 18px 18px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div className="f-mono" style={{ fontSize: 10.5, color: C.ochre, letterSpacing: 3, marginBottom: 4 }}>FOOTBALL UPDATES</div>
+              <div className="f-display" onClick={handleTitleTap} style={{ fontSize: 32, color: C.chalk, letterSpacing: 0.5, lineHeight: 1, userSelect: "none" }}>AUYO FOOTBALL</div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {liveCount > 0 && (
+                <div className="f-mono" style={{ background: C.rust, color: C.chalk, fontSize: 11, padding: "5px 10px", borderRadius: 999, display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: 999, background: C.chalk }} />
+                  {liveCount} LIVE
+                </div>
+              )}
+              <button onClick={() => { setPreviousTab(tab); setTab("search"); }} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 999, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                <Search size={15} color={C.chalk} style={{ opacity: 0.8 }} />
+              </button>
+              <button onClick={() => { setPreviousTab(tab); setTab("legal"); }} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 999, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                <Info size={15} color={C.chalk} style={{ opacity: 0.8 }} />
+              </button>
+            </div>
+          </div>
+
+          {competitions.length > 0 && (
+            <div style={{ marginTop: 16, position: "relative" }}>
+              <button
+                onClick={() => setPickerOpen(!pickerOpen)}
+                style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 999, padding: "7px 12px", display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}
+              >
+                <span className="f-body" style={{ color: C.chalk, fontSize: 13, fontWeight: 600 }}>{activeCompetition?.name || "Select competition"}</span>
+                <ChevronDown size={14} color={C.chalk} style={{ transform: pickerOpen ? "rotate(180deg)" : "none" }} />
+              </button>
+              {activeCompetition?.subtitle && (
+                <div className="f-mono" style={{ fontSize: 10, color: C.chalk, opacity: 0.55, marginTop: 6, marginLeft: 4 }}>{activeCompetition.subtitle}</div>
+              )}
+              {pickerOpen && (
+                <div style={{ position: "absolute", top: 40, left: 0, background: C.chalk, borderRadius: 12, border: `1px solid ${C.line}`, minWidth: 200, zIndex: 20, boxShadow: "0 8px 20px rgba(0,0,0,0.25)", overflow: "hidden" }}>
+                  {competitions.map((c) => (
+                    <div
+                      key={c.id}
+                      onClick={() => { setActiveCompetitionId(c.id); setPickerOpen(false); }}
+                      style={{ padding: "10px 14px", cursor: "pointer", background: c.id === activeCompetitionId ? "rgba(27,67,50,0.08)" : "transparent", borderBottom: `1px solid ${C.line}` }}
+                    >
+                      <div className="f-body" style={{ fontSize: 13, color: C.soil, fontWeight: c.id === activeCompetitionId ? 700 : 500 }}>{c.name}</div>
+                      {c.subtitle && <div className="f-mono" style={{ fontSize: 10, color: C.soil, opacity: 0.5 }}>{c.subtitle}</div>}
+                    </div>
+                  ))}
+                  {isAdminAccess && (
+                    <div onClick={() => { setTab("admin"); setPickerOpen(false); }} style={{ padding: "10px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                      <Plus size={13} color={C.pitch} />
+                      <span className="f-body" style={{ fontSize: 12.5, color: C.pitch, fontWeight: 600 }}>Add competition</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <AdBanner ads={ads} />
+          <SponsorBanner sponsors={sponsors} />
+
+          <div style={{ marginTop: 20 }}>
+            {saveError && (
+              <div className="f-body" style={{ background: C.rust, color: C.chalk, fontSize: 12, padding: "8px 12px", borderRadius: 10, marginBottom: 12, textAlign: "center" }}>
+                ⚠ Couldn't save your last change — check your connection or Firestore rules.
+              </div>
+            )}
+            {loading ? (
+              <div className="f-body" style={{ color: C.chalk, opacity: 0.6, textAlign: "center", marginTop: 40 }}>Loading fixtures…</div>
+            ) : loadError ? (
+              <div className="f-body" style={{ color: C.chalk, opacity: 0.85, textAlign: "center", marginTop: 40, padding: "0 12px", lineHeight: 1.5 }}>
+                ⚠ Couldn't load live data. This usually means the Firestore database rules are blocking access (test mode expires after 30 days). Fix the rules in your Firebase console, then reload this page — your data hasn't been deleted, it just couldn't be reached.
+              </div>
+            ) : (
+              <>
+                {tab === "scores" && <MatchesTab matches={matches} teamName={teamName} teamGroup={teamGroup} competitions={competitions} votedMatches={votedMatches} onVote={onVote} />}
+                {tab === "scorers" && <ScorersTab matches={compMatches} teamName={teamName} />}
+                {tab === "table" && <TableTab competition={activeCompetition} teams={compTeams} matches={compMatches} />}
+                {tab === "teams" && <TeamsTab competition={activeCompetition} teams={compTeams} players={players} matches={compMatches} selectedTeamId={selectedTeamId} setSelectedTeamId={setSelectedTeamId} />}
+                {tab === "news" && <NewsTab news={news} setNews={setNews} likedPosts={likedPosts} toggleLike={toggleLike} />}
+                {tab === "search" && (
+                  <SearchTab
+                    teams={teams} players={players} competitions={competitions} matches={matches} teamName={teamName}
+                    onOpenTeam={(teamId) => {
+                      const t = teams.find((tm) => tm.id === teamId);
+                      if (t) setActiveCompetitionId(t.competitionId);
+                      setSelectedTeamId(teamId);
+                      setTab("teams");
+                    }}
+                    onOpenCompetition={(competitionId) => { setActiveCompetitionId(competitionId); setTab("table"); }}
+                    onOpenMatches={() => setTab("scores")}
+                    onClose={() => setTab(previousTab)}
+                  />
+                )}
+                {tab === "legal" && <LegalTab onClose={() => setTab(previousTab)} />}
+                {tab === "admin" && isAdminAccess && (
+                  <AdminTab
+                    competitions={competitions} setCompetitions={setCompetitions}
+                    activeCompetitionId={activeCompetitionId} setActiveCompetitionId={setActiveCompetitionId}
+                    teams={teams} setTeams={setTeams}
+                    matches={matches} setMatches={setMatches}
+                    news={news} setNews={setNews}
+                    sponsors={sponsors} setSponsors={setSponsors}
+                    ads={ads} setAds={setAds}
+                    players={players} setPlayers={setPlayers}
+                    unlocked={unlocked} setUnlocked={setUnlocked}
+                  />
+                )}
+              </>
+            )}
+          </div>
+        </Pitch>
+
+        <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: C.chalk, borderTop: `1px solid ${C.line}`, display: "flex", padding: "8px 4px 12px", boxShadow: "0 -4px 14px rgba(0,0,0,0.12)" }}>
+          {tabs.map((t) => {
+            const Icon = t.icon;
+            const active = tab === t.key;
+            return (
+              <button key={t.key} onClick={() => setTab(t.key)} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "4px 0" }}>
+                <Icon size={17} color={active ? C.pitch : C.soil} strokeWidth={active ? 2.4 : 1.8} style={{ opacity: active ? 1 : 0.45 }} />
+                <span className="f-mono" style={{ fontSize: 9, letterSpacing: 0.3, color: active ? C.pitch : C.soil, opacity: active ? 1 : 0.45, fontWeight: active ? 700 : 500 }}>{t.label.toUpperCase()}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
