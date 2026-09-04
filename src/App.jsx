@@ -20,6 +20,11 @@ const FONTS = `
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
+// A player can belong to more than one team (club, academy, quarters/Unguwa
+// team, etc). New records use teamIds (array); this stays compatible with
+// any older records that only had a single teamId.
+const playerTeamIds = (p) => p.teamIds || (p.teamId ? [p.teamId] : []);
+
 const GROUP_A_NAMES = ["Sabon Gari FC", "Kofar Fada Utd", "Layin Dogo Stars", "Bakin Kasuwa FC", "Unguwar Rimi FC", "Tudun Wada Warriors", "Kofar Ruwa FC"];
 const GROUP_B_NAMES = ["Yamma Youth FC", "Kudu Kings", "Gabas Rangers", "Arewa Eagles FC", "Sabuwar Kasuwa FC", "Kofar Sauri FC", "Unguwar Liman FC"];
 
@@ -314,7 +319,7 @@ function shareMatch(match, teamName, competitionName) {
   }
 }
 
-function MatchCard({ match, teamName, teamGroup, getCompetitionName, expanded, onToggle, votedMatches, onVote }) {
+function MatchCard({ match, teamName, teamGroup, getCompetitionName, expanded, onToggle, votedMatches, onVote, onTeamTap, onCompetitionTap }) {
   const a = teamName(match.teamAId);
   const b = teamName(match.teamBId);
   const grp = teamGroup(match.teamAId);
@@ -333,7 +338,15 @@ function MatchCard({ match, teamName, teamGroup, getCompetitionName, expanded, o
           {stage === "Group Stage"
             ? grp && <span className="f-mono" style={{ fontSize: 10, color: C.pitch, opacity: 0.5, letterSpacing: 0.5 }}>GRP {grp}</span>
             : <span className="f-mono" style={{ fontSize: 10, color: C.rust, opacity: 0.85, letterSpacing: 0.5, fontWeight: 700 }}>{stage.toUpperCase()}</span>}
-          {compLabel && <span className="f-mono" style={{ fontSize: 9.5, color: C.ochre, opacity: 0.9, letterSpacing: 0.3, background: "rgba(198,138,61,0.12)", padding: "2px 6px", borderRadius: 999 }}>{compLabel}</span>}
+          {compLabel && (
+            <span
+              onClick={(e) => { if (onCompetitionTap && match.competitionId) { e.stopPropagation(); onCompetitionTap(match.competitionId); } }}
+              className="f-mono"
+              style={{ fontSize: 9.5, color: C.ochre, opacity: 0.9, letterSpacing: 0.3, background: "rgba(198,138,61,0.12)", padding: "2px 6px", borderRadius: 999, cursor: onCompetitionTap && match.competitionId ? "pointer" : "default" }}
+            >
+              {compLabel}
+            </span>
+          )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div className="f-mono" style={{ fontSize: 11, color: C.soil, opacity: 0.55, display: "flex", alignItems: "center", gap: 4 }}>
@@ -346,13 +359,25 @@ function MatchCard({ match, teamName, teamGroup, getCompetitionName, expanded, o
       </div>
       <div onClick={onToggle} style={{ cursor: "pointer" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div className="f-body" style={{ fontSize: 15, fontWeight: 600, color: C.soil, flex: 1 }}>{a}</div>
+          <div
+            onClick={(e) => { if (onTeamTap) { e.stopPropagation(); onTeamTap(match.teamAId); } }}
+            className="f-body"
+            style={{ fontSize: 15, fontWeight: 600, color: C.soil, flex: 1 }}
+          >
+            {a}
+          </div>
           {match.status === "upcoming" ? (
             <div className="f-mono" style={{ fontSize: 13, color: C.soil, opacity: 0.4, padding: "0 10px" }}>vs</div>
           ) : (
             <div className="f-display" style={{ fontSize: 26, color: C.pitch, padding: "0 10px", letterSpacing: 1 }}>{match.scoreA}&nbsp;–&nbsp;{match.scoreB}</div>
           )}
-          <div className="f-body" style={{ fontSize: 15, fontWeight: 600, color: C.soil, flex: 1, textAlign: "right" }}>{b}</div>
+          <div
+            onClick={(e) => { if (onTeamTap) { e.stopPropagation(); onTeamTap(match.teamBId); } }}
+            className="f-body"
+            style={{ fontSize: 15, fontWeight: 600, color: C.soil, flex: 1, textAlign: "right" }}
+          >
+            {b}
+          </div>
         </div>
         {match.scorers && match.scorers.length > 0 && (
           <div className="f-body" style={{ fontSize: 11.5, color: C.soil, opacity: 0.6, marginTop: 8, borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
@@ -419,63 +444,71 @@ function MatchCard({ match, teamName, teamGroup, getCompetitionName, expanded, o
   );
 }
 
-function MatchesTab({ matches, teamName, teamGroup, competitions, votedMatches, onVote }) {
-  const [filter, setFilter] = useState("all");
+function MatchesTab({ matches, teamName, teamGroup, competitions, votedMatches, onVote, onTeamTap, onCompetitionTap }) {
   const [expandedId, setExpandedId] = useState(null);
+  const today = new Date().toISOString().slice(0, 10);
 
   const getCompetitionName = (id) => {
     if (!id) return "Friendly";
     return competitions.find((c) => c.id === id)?.name || "Friendly";
   };
 
-  const filtered = matches.filter((m) => {
-    if (filter === "all") return true;
-    if (filter === "friendly") return !m.competitionId;
-    return m.competitionId === filter;
-  });
+  const todaysMatches = matches.filter((m) => m.date === today);
+  const otherFriendlies = matches.filter((m) => !m.competitionId && m.date !== today);
 
-  const groups = [
-    { key: "live", label: "Live now" },
-    { key: "upcoming", label: "Upcoming" },
-    { key: "finished", label: "Results" },
-  ];
+  const groupedToday = {};
+  todaysMatches.forEach((m) => {
+    const k = m.competitionId || "friendly";
+    if (!groupedToday[k]) groupedToday[k] = [];
+    groupedToday[k].push(m);
+  });
+  const groupKeys = Object.keys(groupedToday);
+
+  const renderList = (list) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {list.map((m) => (
+        <MatchCard
+          key={m.id} match={m} teamName={teamName} teamGroup={teamGroup} getCompetitionName={getCompetitionName}
+          expanded={expandedId === m.id} onToggle={() => setExpandedId(expandedId === m.id ? null : m.id)}
+          votedMatches={votedMatches} onVote={onVote} onTeamTap={onTeamTap} onCompetitionTap={onCompetitionTap}
+        />
+      ))}
+    </div>
+  );
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 22, paddingBottom: 90 }}>
-      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 2 }}>
-        {[{ key: "all", label: "All" }, ...competitions.map((c) => ({ key: c.id, label: c.name })), { key: "friendly", label: "Friendlies" }].map((f) => (
-          <button
-            key={f.key}
-            onClick={() => setFilter(f.key)}
-            style={{
-              flexShrink: 0, border: "none", borderRadius: 999, padding: "6px 12px", fontSize: 11.5,
-              fontFamily: "'Work Sans', sans-serif", fontWeight: 700, cursor: "pointer",
-              background: filter === f.key ? C.ochre : "rgba(255,255,255,0.1)",
-              color: C.chalk, opacity: filter === f.key ? 1 : 0.6,
-            }}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-      {groups.map((g) => {
-        const list = filtered.filter((m) => m.status === g.key);
-        if (!list.length) return null;
-        return (
-          <div key={g.key}>
-            <div className="f-mono" style={{ fontSize: 11, letterSpacing: 2, color: C.ochre, marginBottom: 10, fontWeight: 700 }}>{g.label.toUpperCase()}</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {list.map((m) => (
-                <MatchCard
-                  key={m.id} match={m} teamName={teamName} teamGroup={teamGroup} getCompetitionName={getCompetitionName}
-                  expanded={expandedId === m.id} onToggle={() => setExpandedId(expandedId === m.id ? null : m.id)}
-                  votedMatches={votedMatches} onVote={onVote}
-                />
-              ))}
-            </div>
+      <div>
+        <div className="f-mono" style={{ fontSize: 11, letterSpacing: 2, color: C.ochre, marginBottom: 10, fontWeight: 700 }}>TODAY'S MATCHES</div>
+        {groupKeys.length === 0 && (
+          <div className="f-body" style={{ color: C.chalk, opacity: 0.6, textAlign: "center", marginTop: 20, fontSize: 13 }}>
+            No matches today. Search for a competition or team to see their full schedule.
           </div>
-        );
-      })}
-      {matches.length === 0 && <div className="f-body" style={{ color: C.chalk, opacity: 0.6, textAlign: "center", marginTop: 40 }}>No fixtures yet in this competition.</div>}
+        )}
+        {groupKeys.map((k) => {
+          const isFriendlyGroup = k === "friendly";
+          const label = isFriendlyGroup ? "Friendly" : getCompetitionName(k);
+          return (
+            <div key={k} style={{ marginBottom: 18 }}>
+              <div
+                onClick={() => !isFriendlyGroup && onCompetitionTap && onCompetitionTap(k)}
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, cursor: !isFriendlyGroup && onCompetitionTap ? "pointer" : "default" }}
+              >
+                <span className="f-body" style={{ fontSize: 13.5, fontWeight: 700, color: C.chalk }}>{label}</span>
+                {!isFriendlyGroup && <ChevronRight size={14} color={C.chalk} style={{ opacity: 0.5 }} />}
+              </div>
+              {renderList(groupedToday[k])}
+            </div>
+          );
+        })}
+      </div>
+
+      {otherFriendlies.length > 0 && (
+        <div>
+          <div className="f-mono" style={{ fontSize: 11, letterSpacing: 2, color: C.ochre, marginBottom: 10, fontWeight: 700 }}>OTHER FRIENDLIES</div>
+          {renderList(otherFriendlies)}
+        </div>
+      )}
     </div>
   );
 }
@@ -701,7 +734,7 @@ function computeTopScorers(matches, teamName) {
 function TeamProfile({ team, players, matches, onClose }) {
   if (!team) return null;
   const record = computeStandings([team], matches)[0];
-  const roster = players.filter((p) => p.teamId === team.id);
+  const roster = players.filter((p) => playerTeamIds(p).includes(team.id));
   const goalsFor = (player) => {
     const key = player.name.trim().toLowerCase();
     let total = 0;
@@ -795,11 +828,11 @@ function TeamProfile({ team, players, matches, onClose }) {
 }
 
 
-function TeamsTab({ competition, teams, players, matches, selectedTeamId, setSelectedTeamId }) {
+function TeamsTab({ competition, teams, players, matches, selectedTeamId, setSelectedTeamId, onClose }) {
   const selectedTeam = teams.find((t) => t.id === selectedTeamId);
 
   if (selectedTeam) {
-    return <TeamProfile team={selectedTeam} players={players} matches={matches} onClose={() => setSelectedTeamId(null)} />;
+    return <TeamProfile team={selectedTeam} players={players} matches={matches} onClose={onClose || (() => setSelectedTeamId(null))} />;
   }
 
   const TeamCard = ({ t }) => (
@@ -918,14 +951,25 @@ function SearchTab({ teams, players, competitions, matches, teamName, onOpenTeam
         <div style={{ marginBottom: 16 }}>
           <div className="f-mono" style={{ fontSize: 10, letterSpacing: 1.5, color: C.ochre, marginBottom: 6, fontWeight: 700 }}>PLAYERS</div>
           <div style={{ background: C.chalk, borderRadius: 12, overflow: "hidden" }}>
-            {playerResults.map((p) => (
-              <ResultRow key={p.id} onClick={() => onOpenTeam(p.teamId)}>
-                <div>
-                  <span className="f-body" style={{ fontSize: 13.5, fontWeight: 600, color: C.soil }}>{p.name}</span>
-                  <span className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.5, marginLeft: 8 }}>{teamName(p.teamId)}</span>
+            {playerResults.map((p) => {
+              const ids = playerTeamIds(p);
+              return (
+                <div key={p.id} style={{ padding: "10px 12px", borderBottom: `1px solid ${C.line}` }}>
+                  <div className="f-body" style={{ fontSize: 13.5, fontWeight: 600, color: C.soil, marginBottom: ids.length ? 6 : 0 }}>{p.name}</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {ids.map((tid) => (
+                      <button
+                        key={tid}
+                        onClick={() => onOpenTeam(tid)}
+                        style={{ background: C.sand || "#F2E9D8", border: "none", borderRadius: 999, padding: "4px 10px", fontSize: 11, fontFamily: "'Work Sans', sans-serif", color: C.soil, cursor: "pointer" }}
+                      >
+                        {teamName(tid)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </ResultRow>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -969,6 +1013,72 @@ function ScorersTab({ matches, teamName }) {
         ))}
       </div>
       {scorers.length === 0 && <div className="f-body" style={{ color: C.chalk, opacity: 0.6, textAlign: "center", marginTop: 40 }}>No goals recorded yet in this competition.</div>}
+    </div>
+  );
+}
+
+function CompetitionProfile({ competition, teams, matches, teamName, teamGroup, votedMatches, onVote, onTeamTap, onClose }) {
+  const [section, setSection] = useState("table");
+  const [expandedId, setExpandedId] = useState(null);
+  if (!competition) return null;
+
+  const groups = [
+    { key: "live", label: "Live now" },
+    { key: "upcoming", label: "Upcoming" },
+    { key: "finished", label: "Results" },
+  ];
+
+  return (
+    <div style={{ paddingBottom: 90 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+        <button onClick={onClose} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 999, padding: "6px 12px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer" }}>
+          <span className="f-body" style={{ fontSize: 12, fontWeight: 700, color: C.chalk }}>✕ Close</span>
+        </button>
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <div className="f-display" style={{ fontSize: 22, color: C.chalk, lineHeight: 1.1 }}>{competition.name}</div>
+        {competition.subtitle && <div className="f-mono" style={{ fontSize: 10.5, color: C.chalk, opacity: 0.55, marginTop: 4 }}>{competition.subtitle}</div>}
+      </div>
+
+      <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+        {[{ key: "table", label: "Table" }, { key: "scorers", label: "Scorers" }, { key: "matches", label: "Matches" }].map((s) => (
+          <button
+            key={s.key}
+            onClick={() => setSection(s.key)}
+            style={{
+              flex: 1, border: "none", borderRadius: 999, padding: "8px 10px", fontSize: 12.5,
+              fontFamily: "'Work Sans', sans-serif", fontWeight: 700, cursor: "pointer",
+              background: section === s.key ? C.ochre : "rgba(255,255,255,0.1)",
+              color: C.chalk, opacity: section === s.key ? 1 : 0.6,
+            }}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {section === "table" && <TableTab competition={competition} teams={teams} matches={matches} onTeamTap={onTeamTap} />}
+      {section === "scorers" && <ScorersTab matches={matches} teamName={teamName} />}
+      {section === "matches" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+          {groups.map((g) => {
+            const list = matches.filter((m) => m.status === g.key).sort((a, b) => (a.date < b.date ? 1 : -1));
+            if (!list.length) return null;
+            return (
+              <div key={g.key}>
+                <div className="f-mono" style={{ fontSize: 11, letterSpacing: 2, color: C.ochre, marginBottom: 10, fontWeight: 700 }}>{g.label.toUpperCase()}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {list.map((m) => (
+                    <MatchCard key={m.id} match={m} teamName={teamName} teamGroup={teamGroup} getCompetitionName={null} expanded={expandedId === m.id} onToggle={() => setExpandedId(expandedId === m.id ? null : m.id)} votedMatches={votedMatches} onVote={onVote} onTeamTap={onTeamTap} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          {matches.length === 0 && <div className="f-body" style={{ color: C.chalk, opacity: 0.6, textAlign: "center", marginTop: 30 }}>No matches scheduled yet.</div>}
+        </div>
+      )}
     </div>
   );
 }
@@ -1040,7 +1150,7 @@ function estimateMinute(match) {
   }
 }
 
-function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers }) {
+function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, competitions, teams }) {
   const [expanded, setExpanded] = useState(false);
   const [venue, setVenue] = useState(team.venue || "");
   const [manager, setManager] = useState(team.manager || "");
@@ -1051,10 +1161,23 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers }
   const [playerPosition, setPlayerPosition] = useState("");
   const [playerPhotoUrl, setPlayerPhotoUrl] = useState("");
   const [playerPhotoUploading, setPlayerPhotoUploading] = useState(false);
+  const [existingPlayerQuery, setExistingPlayerQuery] = useState("");
+  const [assignCompId, setAssignCompId] = useState(team.competitionId || "");
+  const [assignGroup, setAssignGroup] = useState(team.group || "A");
 
-  const roster = players.filter((p) => p.teamId === team.id);
+  const roster = players.filter((p) => playerTeamIds(p).includes(team.id));
+  const assignedComp = competitions?.find((c) => c.id === team.competitionId);
 
   const saveDetails = () => updateTeam(team.id, { venue: venue.trim(), manager: manager.trim(), headCoach: headCoach.trim() });
+
+  const saveAssignment = () => {
+    if (!assignCompId) {
+      updateTeam(team.id, { competitionId: null, group: null });
+      return;
+    }
+    const comp = competitions.find((c) => c.id === assignCompId);
+    updateTeam(team.id, { competitionId: assignCompId, group: comp?.hasGroups ? assignGroup : null });
+  };
 
   const handleBadgeSelect = async (e) => {
     const file = e.target.files && e.target.files[0];
@@ -1088,10 +1211,21 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers }
 
   const addPlayer = () => {
     if (!playerName.trim() || playerPhotoUploading) return;
-    setPlayers([...players, { id: uid(), teamId: team.id, name: playerName.trim(), number: playerNumber.trim(), position: playerPosition.trim(), photoUrl: playerPhotoUrl || null }]);
+    setPlayers([...players, { id: uid(), teamIds: [team.id], name: playerName.trim(), number: playerNumber.trim(), position: playerPosition.trim(), photoUrl: playerPhotoUrl || null }]);
     setPlayerName(""); setPlayerNumber(""); setPlayerPosition(""); setPlayerPhotoUrl("");
   };
-  const removePlayer = (id) => setPlayers(players.filter((p) => p.id !== id));
+  // Removes this player from THIS team's roster only. If they have no other
+  // team affiliations left afterward, the player record itself is removed.
+  const removePlayer = (id) => {
+    const updated = players
+      .map((p) => (p.id === id ? { ...p, teamIds: playerTeamIds(p).filter((tid) => tid !== team.id) } : p))
+      .filter((p) => p.id !== id || playerTeamIds(p).length > 0);
+    setPlayers(updated);
+  };
+  const addExistingPlayer = (playerId) => {
+    setPlayers(players.map((p) => (p.id === playerId ? { ...p, teamIds: [...new Set([...playerTeamIds(p), team.id])] } : p)));
+    setExistingPlayerQuery("");
+  };
 
   return (
     <div style={{ borderTop: `1px solid ${C.line}`, padding: "8px 0" }}>
@@ -1100,12 +1234,31 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers }
           {team.badgeUrl && <img src={team.badgeUrl} alt="" style={{ width: 22, height: 22, borderRadius: 6, objectFit: "cover" }} />}
           <span className="f-body" style={{ fontSize: 13.5, color: C.soil }}>{team.name}</span>
           {roster.length > 0 && <span className="f-mono" style={{ fontSize: 10, color: C.soil, opacity: 0.5 }}>{roster.length} players</span>}
+          {competitions && <span className="f-mono" style={{ fontSize: 9.5, color: assignedComp ? C.pitch : C.soil, opacity: assignedComp ? 0.8 : 0.4 }}>{assignedComp ? assignedComp.name : "Unassigned"}</span>}
         </div>
         <button onClick={() => removeTeam(team.id)} style={{ background: "none", border: "none", cursor: "pointer" }}><Trash2 size={14} color={C.rust} /></button>
       </div>
 
       {expanded && (
         <div style={{ marginTop: 10, paddingLeft: 4 }}>
+          {competitions && (
+            <div style={{ marginBottom: 12 }}>
+              <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginBottom: 6 }}>COMPETITION ASSIGNMENT</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <select style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", flex: 1, minWidth: 120 }} value={assignCompId} onChange={(e) => setAssignCompId(e.target.value)}>
+                  <option value="">Unassigned</option>
+                  {competitions.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                {assignCompId && competitions.find((c) => c.id === assignCompId)?.hasGroups && (
+                  <select style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 90 }} value={assignGroup} onChange={(e) => setAssignGroup(e.target.value)}>
+                    <option value="A">Group A</option>
+                    <option value="B">Group B</option>
+                  </select>
+                )}
+                <button onClick={saveAssignment} style={{ ...btnStyle(C.pitch, C.chalk), padding: "7px 10px", fontSize: 12 }}>Save</button>
+              </div>
+            </div>
+          )}
           <Field label="Badge / logo">
             <input type="file" accept="image/*" onChange={handleBadgeSelect} style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px" }} />
             {badgeUploading && <div className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.6, marginTop: 4 }}>Uploading…</div>}
@@ -1118,13 +1271,49 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers }
           </div>
 
           <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginBottom: 6 }}>ROSTER</div>
-          {roster.map((p) => (
-            <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0" }} className="f-body">
-              <span style={{ fontSize: 12.5, color: C.soil }}>{p.name}{p.number ? ` #${p.number}` : ""}{p.position ? ` · ${p.position}` : ""}</span>
-              <button onClick={() => removePlayer(p.id)} style={{ background: "none", border: "none", cursor: "pointer" }}><Trash2 size={12} color={C.rust} /></button>
+          {roster.map((p) => {
+            const otherTeamNames = teams
+              ? playerTeamIds(p).filter((tid) => tid !== team.id).map((tid) => teams.find((t) => t.id === tid)?.name).filter(Boolean)
+              : [];
+            return (
+              <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0" }} className="f-body">
+                <div>
+                  <span style={{ fontSize: 12.5, color: C.soil }}>{p.name}{p.number ? ` #${p.number}` : ""}{p.position ? ` · ${p.position}` : ""}</span>
+                  {otherTeamNames.length > 0 && <div className="f-mono" style={{ fontSize: 10, color: C.soil, opacity: 0.5 }}>Also: {otherTeamNames.join(", ")}</div>}
+                </div>
+                <button onClick={() => removePlayer(p.id)} style={{ background: "none", border: "none", cursor: "pointer" }}><Trash2 size={12} color={C.rust} /></button>
+              </div>
+            );
+          })}
+
+          {existingPlayerQuery.trim() && (
+            <div style={{ marginTop: 6, marginBottom: 6 }}>
+              {players
+                .filter((p) => !playerTeamIds(p).includes(team.id) && p.name.toLowerCase().includes(existingPlayerQuery.trim().toLowerCase()))
+                .slice(0, 6)
+                .map((p) => {
+                  const theirTeams = teams ? playerTeamIds(p).map((tid) => teams.find((t) => t.id === tid)?.name).filter(Boolean) : [];
+                  return (
+                    <div key={p.id} onClick={() => addExistingPlayer(p.id)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", background: C.sand || "#F2E9D8", borderRadius: 8, marginBottom: 4, cursor: "pointer" }}>
+                      <div>
+                        <span className="f-body" style={{ fontSize: 12.5, color: C.soil }}>{p.name}</span>
+                        {theirTeams.length > 0 && <span className="f-mono" style={{ fontSize: 10, color: C.soil, opacity: 0.5, marginLeft: 6 }}>{theirTeams.join(", ")}</span>}
+                      </div>
+                      <Plus size={13} color={C.pitch} />
+                    </div>
+                  );
+                })}
             </div>
-          ))}
-          <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+          )}
+          <input
+            style={{ ...inputStyle, fontSize: 12, padding: "7px 9px", marginTop: 6 }}
+            placeholder="Search to add an existing player (already on another team)…"
+            value={existingPlayerQuery}
+            onChange={(e) => setExistingPlayerQuery(e.target.value)}
+          />
+
+          <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, margin: "10px 0 6px" }}>OR ADD A NEW PLAYER</div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", flex: 1, minWidth: 100 }} placeholder="Player name" value={playerName} onChange={(e) => setPlayerName(e.target.value)} />
             <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 50 }} placeholder="No." value={playerNumber} onChange={(e) => setPlayerNumber(e.target.value)} />
             <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 90 }} placeholder="Position" value={playerPosition} onChange={(e) => setPlayerPosition(e.target.value)} />
@@ -1281,6 +1470,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
   const [compName, setCompName] = useState("");
   const [compSubtitle, setCompSubtitle] = useState("");
   const [compHasGroups, setCompHasGroups] = useState(true);
+  const [globalTeamName, setGlobalTeamName] = useState("");
   const [sponsorName, setSponsorName] = useState("");
   const [sponsorUrl, setSponsorUrl] = useState("");
   const [sponsorLogoUrl, setSponsorLogoUrl] = useState("");
@@ -1328,6 +1518,11 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
   };
   const removeTeam = (id) => setTeams(teams.filter((t) => t.id !== id));
   const updateTeam = (id, patch) => setTeams(teams.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  const addGlobalTeam = () => {
+    if (!globalTeamName.trim()) return;
+    setTeams([...teams, { id: uid(), name: globalTeamName.trim(), competitionId: null, group: null }]);
+    setGlobalTeamName("");
+  };
 
   const addMatch = () => {
     if (!mA || !mB || mA === mB || !mDate) return;
@@ -1433,6 +1628,23 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
         </div>
       </div>
 
+      <div>
+        <div className="f-mono" style={{ fontSize: 11, letterSpacing: 2, color: C.ochre, marginBottom: 10, fontWeight: 700 }}>TEAM DATABASE</div>
+        <div style={{ background: C.chalk, borderRadius: 14, padding: 14, border: `1px solid ${C.line}` }}>
+          <div className="f-body" style={{ fontSize: 11.5, color: C.soil, opacity: 0.6, marginBottom: 10, lineHeight: 1.4 }}>
+            Add teams and players here without tying them to a competition — useful for building up your roster of teams ahead of time. Assign a team to a specific competition (and group) whenever it's ready to compete.
+          </div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
+            <input style={inputStyle} placeholder="New team name" value={globalTeamName} onChange={(e) => setGlobalTeamName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addGlobalTeam(); }} />
+            <button onClick={addGlobalTeam} style={btnStyle(C.pitch, C.chalk)}><Plus size={14} /></button>
+          </div>
+          {teams.map((t) => (
+            <TeamManagementRow key={t.id} team={t} updateTeam={updateTeam} removeTeam={removeTeam} players={players} setPlayers={setPlayers} competitions={competitions} teams={teams} />
+          ))}
+          {teams.length === 0 && <div className="f-body" style={{ fontSize: 12, color: C.soil, opacity: 0.5, marginTop: 8 }}>No teams yet — add one above.</div>}
+        </div>
+      </div>
+
       {!activeCompetitionId ? (
         <div className="f-body" style={{ color: C.chalk, opacity: 0.7, textAlign: "center" }}>Select or add a competition above to manage its teams and fixtures.</div>
       ) : (
@@ -1452,7 +1664,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
                 <div key={g}>
                   <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginTop: 8, marginBottom: 2 }}>GROUP {g}</div>
                   {competitionTeams.filter((t) => t.group === g).map((t) => (
-                    <TeamManagementRow key={t.id} team={t} updateTeam={updateTeam} removeTeam={removeTeam} players={players} setPlayers={setPlayers} />
+                    <TeamManagementRow key={t.id} team={t} updateTeam={updateTeam} removeTeam={removeTeam} players={players} setPlayers={setPlayers} teams={teams} />
                   ))}
                 </div>
               ))}
@@ -1508,7 +1720,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
                   ))}
                 </select>
               </Field>
-              <Field label="Away team">
+               <Field label="Away team">
                 <select style={inputStyle} value={mB} onChange={(e) => setMB(e.target.value)}>
                   <option value="">Select team</option>
                   {(isFriendly ? teams : (mStage === "Group Stage" ? competitionTeams.filter((t) => t.group === mGroup) : competitionTeams)).map((t) => (
@@ -1668,6 +1880,7 @@ export default function AuyoFootballApp() {
   const [tab, setTab] = useState("scores");
   const [previousTab, setPreviousTab] = useState("scores");
   const [selectedTeamId, setSelectedTeamId] = useState(null);
+  const [selectedCompetitionId, setSelectedCompetitionId] = useState(null);
   const [unlocked, setUnlocked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -1790,9 +2003,6 @@ export default function AuyoFootballApp() {
 
   const tabs = [
     { key: "scores", label: "Matches", icon: Radio },
-    { key: "scorers", label: "Scorers", icon: Target },
-    { key: "table", label: "Table", icon: Table2 },
-    { key: "teams", label: "Teams", icon: Users },
     { key: "news", label: "News", icon: Newspaper },
     ...(isAdminAccess ? [{ key: "admin", label: "Admin", icon: Lock }] : []),
   ];
@@ -1840,7 +2050,7 @@ export default function AuyoFootballApp() {
                   {competitions.map((c) => (
                     <div
                       key={c.id}
-                      onClick={() => { setActiveCompetitionId(c.id); setPickerOpen(false); }}
+                      onClick={() => { setActiveCompetitionId(c.id); setSelectedCompetitionId(c.id); setPreviousTab(tab); setTab("competition"); setPickerOpen(false); }}
                       style={{ padding: "10px 14px", cursor: "pointer", background: c.id === activeCompetitionId ? "rgba(27,67,50,0.08)" : "transparent", borderBottom: `1px solid ${C.line}` }}
                     >
                       <div className="f-body" style={{ fontSize: 13, color: C.soil, fontWeight: c.id === activeCompetitionId ? 700 : 500 }}>{c.name}</div>
@@ -1875,10 +2085,18 @@ export default function AuyoFootballApp() {
               </div>
             ) : (
               <>
-                {tab === "scores" && <MatchesTab matches={matches} teamName={teamName} teamGroup={teamGroup} competitions={competitions} votedMatches={votedMatches} onVote={onVote} />}
-                {tab === "scorers" && <ScorersTab matches={compMatches} teamName={teamName} />}
-                {tab === "table" && <TableTab competition={activeCompetition} teams={compTeams} matches={compMatches} />}
-                {tab === "teams" && <TeamsTab competition={activeCompetition} teams={compTeams} players={players} matches={compMatches} selectedTeamId={selectedTeamId} setSelectedTeamId={setSelectedTeamId} />}
+                {tab === "scores" && <MatchesTab matches={matches} teamName={teamName} teamGroup={teamGroup} competitions={competitions} votedMatches={votedMatches} onVote={onVote} onTeamTap={(teamId) => { setPreviousTab(tab); setSelectedTeamId(teamId); setTab("teams"); }} onCompetitionTap={(competitionId) => { setPreviousTab(tab); setSelectedCompetitionId(competitionId); setTab("competition"); }} />}
+                {tab === "competition" && (
+                  <CompetitionProfile
+                    competition={competitions.find((c) => c.id === selectedCompetitionId)}
+                    teams={teams.filter((t) => t.competitionId === selectedCompetitionId)}
+                    matches={matches.filter((m) => m.competitionId === selectedCompetitionId)}
+                    teamName={teamName} teamGroup={teamGroup} votedMatches={votedMatches} onVote={onVote}
+                    onTeamTap={(teamId) => { setPreviousTab("competition"); setSelectedTeamId(teamId); setTab("teams"); }}
+                    onClose={() => { setSelectedCompetitionId(null); setTab(previousTab); }}
+                  />
+                )}
+                {tab === "teams" && <TeamsTab competition={activeCompetition} teams={teams} players={players} matches={matches} selectedTeamId={selectedTeamId} setSelectedTeamId={setSelectedTeamId} onClose={() => { setSelectedTeamId(null); setTab(previousTab); }} />}
                 {tab === "news" && <NewsTab news={news} setNews={setNews} likedPosts={likedPosts} toggleLike={toggleLike} />}
                 {tab === "search" && (
                   <SearchTab
@@ -1889,7 +2107,7 @@ export default function AuyoFootballApp() {
                       setSelectedTeamId(teamId);
                       setTab("teams");
                     }}
-                    onOpenCompetition={(competitionId) => { setActiveCompetitionId(competitionId); setTab("table"); }}
+                    onOpenCompetition={(competitionId) => { setSelectedCompetitionId(competitionId); setTab("competition"); }}
                     onOpenMatches={() => setTab("scores")}
                     onClose={() => setTab(previousTab)}
                   />
