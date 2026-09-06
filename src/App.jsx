@@ -327,15 +327,12 @@ function shareMatch(match, teamName, competitionName) {
   }
 }
 
-function MatchCard({ match, teamName, teamGroup, getCompetitionName, expanded, onToggle, votedMatches, onVote, onTeamTap, onCompetitionTap }) {
+function MatchCard({ match, teamName, teamGroup, getCompetitionName, onOpenMatch, onTeamTap, onCompetitionTap }) {
   const a = match.teamAName || teamName(match.teamAId);
   const b = match.teamBName || teamName(match.teamBId);
   const grp = teamGroup(match.teamAId);
   const stage = match.stage || "Group Stage";
   const commentary = match.commentary || [];
-  const motm = match.motm || { candidates: [], votes: {} };
-  const hasVoted = votedMatches.has(match.id);
-  const totalVotes = Object.values(motm.votes || {}).reduce((s, v) => s + v, 0);
   const compLabel = getCompetitionName ? getCompetitionName(match.competitionId) : null;
 
   return (
@@ -365,7 +362,7 @@ function MatchCard({ match, teamName, teamGroup, getCompetitionName, expanded, o
           </button>
         </div>
       </div>
-      <div onClick={onToggle} style={{ cursor: "pointer" }}>
+      <div onClick={() => onOpenMatch && onOpenMatch(match.id)} style={{ cursor: onOpenMatch ? "pointer" : "default" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div
             onClick={(e) => { if (onTeamTap && match.teamAId) { e.stopPropagation(); onTeamTap(match.teamAId); } }}
@@ -396,64 +393,15 @@ function MatchCard({ match, teamName, teamGroup, getCompetitionName, expanded, o
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}><MapPin size={11} /> {match.venue} · {match.date}</span>
           <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {commentary.length > 0 && <span>💬 {commentary.length}</span>}
-            <ChevronRight size={13} style={{ opacity: 0.4, transform: expanded ? "rotate(90deg)" : "none" }} />
+            <ChevronRight size={13} style={{ opacity: 0.4 }} />
           </span>
         </div>
       </div>
-
-      {expanded && (
-        <div style={{ marginTop: 12, borderTop: `1px solid ${C.line}`, paddingTop: 12 }}>
-          {commentary.length > 0 && (
-            <div style={{ marginBottom: motm.candidates.length > 0 ? 16 : 0 }}>
-              <div className="f-mono" style={{ fontSize: 10, letterSpacing: 1, color: C.ochre, opacity: 0.9, marginBottom: 8, fontWeight: 700 }}>MATCH COMMENTARY</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {[...commentary].reverse().map((c) => (
-                  <div key={c.id} style={{ display: "flex", gap: 8 }}>
-                    <span className="f-mono" style={{ fontSize: 11, color: C.pitch, fontWeight: 700, flexShrink: 0 }}>{c.minute}'</span>
-                    <span className="f-body" style={{ fontSize: 12.5, color: C.soil, opacity: 0.85 }}>{c.text}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {motm.candidates.length > 0 && (
-            <div>
-              <div className="f-mono" style={{ fontSize: 10, letterSpacing: 1, color: C.ochre, opacity: 0.9, marginBottom: 8, fontWeight: 700 }}>MAN OF THE MATCH</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {motm.candidates.map((cand) => {
-                  const votes = (motm.votes || {})[cand.id] || 0;
-                  const pct = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
-                  return (
-                    <button
-                      key={cand.id}
-                      disabled={hasVoted}
-                      onClick={() => !hasVoted && onVote(match.id, cand.id)}
-                      style={{
-                        position: "relative", overflow: "hidden", textAlign: "left", border: `1px solid ${C.line}`, borderRadius: 9,
-                        padding: "8px 10px", background: C.chalk, cursor: hasVoted ? "default" : "pointer",
-                      }}
-                    >
-                      {hasVoted && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pct}%`, background: "rgba(198,138,61,0.18)", zIndex: 0 }} />}
-                      <div style={{ position: "relative", zIndex: 1, display: "flex", justifyContent: "space-between" }}>
-                        <span className="f-body" style={{ fontSize: 13, color: C.soil, fontWeight: 600 }}>{cand.name}</span>
-                        {hasVoted && <span className="f-mono" style={{ fontSize: 11, color: C.soil, opacity: 0.6 }}>{votes} · {pct}%</span>}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-              {!hasVoted && <div className="f-body" style={{ fontSize: 11, color: C.soil, opacity: 0.5, marginTop: 6 }}>Tap a name to vote — one vote per device.</div>}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
 
-function MatchesTab({ matches, teamName, teamGroup, competitions, votedMatches, onVote, onTeamTap, onCompetitionTap }) {
-  const [expandedId, setExpandedId] = useState(null);
+function MatchesTab({ matches, teamName, teamGroup, competitions, votedMatches, onVote, onTeamTap, onCompetitionTap, onOpenMatch }) {
   const today = new Date().toISOString().slice(0, 10);
 
   const getCompetitionName = (id) => {
@@ -477,8 +425,7 @@ function MatchesTab({ matches, teamName, teamGroup, competitions, votedMatches, 
       {list.map((m) => (
         <MatchCard
           key={m.id} match={m} teamName={teamName} teamGroup={teamGroup} getCompetitionName={getCompetitionName}
-          expanded={expandedId === m.id} onToggle={() => setExpandedId(expandedId === m.id ? null : m.id)}
-          votedMatches={votedMatches} onVote={onVote} onTeamTap={onTeamTap} onCompetitionTap={onCompetitionTap}
+          onOpenMatch={onOpenMatch} onTeamTap={onTeamTap} onCompetitionTap={onCompetitionTap}
         />
       ))}
     </div>
@@ -677,22 +624,28 @@ function computeStandings(teams, matches) {
 
 function StandingsTable({ standings, onTeamTap }) {
   return (
-    <div style={{ background: C.chalk, borderRadius: 14, border: `1px solid ${C.line}`, overflow: "hidden" }}>
-      <div className="f-mono" style={{ display: "grid", gridTemplateColumns: "1fr 26px 26px 26px 30px 34px", fontSize: 10, color: C.soil, opacity: 0.5, padding: "10px 12px", letterSpacing: 0.5, borderBottom: `1px solid ${C.line}` }}>
-        <div>TEAM</div><div style={{ textAlign: "center" }}>P</div><div style={{ textAlign: "center" }}>W</div><div style={{ textAlign: "center" }}>D</div><div style={{ textAlign: "center" }}>L</div><div style={{ textAlign: "center" }}>PTS</div>
+    <div style={{ background: C.chalk, borderRadius: 14, border: `1px solid ${C.line}`, overflow: "hidden", overflowX: "auto" }}>
+      <div className="f-mono" style={{ display: "grid", gridTemplateColumns: "1fr 24px 22px 22px 22px 26px 26px 30px 32px", fontSize: 9.5, color: C.soil, opacity: 0.5, padding: "10px 8px", letterSpacing: 0.3, borderBottom: `1px solid ${C.line}`, minWidth: 380 }}>
+        <div>TEAM</div><div style={{ textAlign: "center" }}>P</div><div style={{ textAlign: "center" }}>W</div><div style={{ textAlign: "center" }}>D</div><div style={{ textAlign: "center" }}>L</div><div style={{ textAlign: "center" }}>GF</div><div style={{ textAlign: "center" }}>GA</div><div style={{ textAlign: "center" }}>GD</div><div style={{ textAlign: "center" }}>PTS</div>
       </div>
-      {standings.map((r, i) => (
-        <div key={r.id} onClick={() => onTeamTap && onTeamTap(r.id)} className="f-body" style={{ display: "grid", gridTemplateColumns: "1fr 26px 26px 26px 30px 34px", fontSize: 13, padding: "11px 12px", alignItems: "center", borderBottom: i < standings.length - 1 ? `1px solid ${C.line}` : "none", cursor: onTeamTap ? "pointer" : "default" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, color: C.soil, fontWeight: 600 }}>
-            <span className="f-mono" style={{ fontSize: 10.5, opacity: 0.4, width: 12 }}>{i + 1}</span>{r.name}
+      {standings.map((r, i) => {
+        const gd = r.gf - r.ga;
+        return (
+          <div key={r.id} onClick={() => onTeamTap && onTeamTap(r.id)} className="f-body" style={{ display: "grid", gridTemplateColumns: "1fr 24px 22px 22px 22px 26px 26px 30px 32px", fontSize: 12.5, padding: "11px 8px", alignItems: "center", borderBottom: i < standings.length - 1 ? `1px solid ${C.line}` : "none", cursor: onTeamTap ? "pointer" : "default", minWidth: 380 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, color: C.soil, fontWeight: 600 }}>
+              <span className="f-mono" style={{ fontSize: 10, opacity: 0.4, width: 12 }}>{i + 1}</span>{r.name}
+            </div>
+            <div className="f-mono" style={{ textAlign: "center", opacity: 0.7 }}>{r.p}</div>
+            <div className="f-mono" style={{ textAlign: "center", opacity: 0.7 }}>{r.w}</div>
+            <div className="f-mono" style={{ textAlign: "center", opacity: 0.7 }}>{r.d}</div>
+            <div className="f-mono" style={{ textAlign: "center", opacity: 0.7 }}>{r.l}</div>
+            <div className="f-mono" style={{ textAlign: "center", opacity: 0.7 }}>{r.gf}</div>
+            <div className="f-mono" style={{ textAlign: "center", opacity: 0.7 }}>{r.ga}</div>
+            <div className="f-mono" style={{ textAlign: "center", opacity: 0.7 }}>{gd > 0 ? `+${gd}` : gd}</div>
+            <div className="f-mono" style={{ textAlign: "center", fontWeight: 700, color: C.pitch }}>{r.pts}</div>
           </div>
-          <div className="f-mono" style={{ textAlign: "center", opacity: 0.7 }}>{r.p}</div>
-          <div className="f-mono" style={{ textAlign: "center", opacity: 0.7 }}>{r.w}</div>
-          <div className="f-mono" style={{ textAlign: "center", opacity: 0.7 }}>{r.d}</div>
-          <div className="f-mono" style={{ textAlign: "center", opacity: 0.7 }}>{r.l}</div>
-          <div className="f-mono" style={{ textAlign: "center", fontWeight: 700, color: C.pitch }}>{r.pts}</div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -739,20 +692,89 @@ function computeTopScorers(matches, teamName) {
     .sort((a, b) => b.goals - a.goals);
 }
 
+function PlayerProfile({ player, team, goals, onClose }) {
+  return (
+    <div style={{ paddingBottom: 90 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <button onClick={onClose} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 999, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <ArrowLeft size={16} color={C.chalk} />
+        </button>
+        <span className="f-display" style={{ fontSize: 17, color: C.chalk }}>{player.name}</span>
+        <div style={{ width: 32 }} />
+      </div>
+
+      <div style={{ background: C.chalk, borderRadius: 16, padding: "22px 18px", border: `1px solid ${C.line}`, textAlign: "center" }}>
+        {team && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 16 }}>
+            {team.badgeUrl ? (
+              <img src={team.badgeUrl} alt="" style={{ width: 26, height: 26, borderRadius: 7, objectFit: "cover" }} />
+            ) : (
+              <div style={{ width: 26, height: 26, borderRadius: 7, background: C.sand || "#F2E9D8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span className="f-display" style={{ fontSize: 11, color: C.pitch }}>{team.name?.[0] || "?"}</span>
+              </div>
+            )}
+            <span className="f-body" style={{ fontSize: 13, fontWeight: 600, color: C.soil }}>{team.name}</span>
+          </div>
+        )}
+
+        <div style={{ position: "relative", width: 128, height: 128, margin: "0 auto 16px" }}>
+          {player.photoUrl ? (
+            <img src={player.photoUrl} alt="" style={{ width: 128, height: 128, borderRadius: 999, objectFit: "cover", border: `3px solid ${C.ochre}` }} />
+          ) : (
+            <div style={{ width: 128, height: 128, borderRadius: 999, background: C.sand || "#F2E9D8", display: "flex", alignItems: "center", justifyContent: "center", border: `3px solid ${C.ochre}` }}>
+              <span className="f-display" style={{ fontSize: 40, color: C.pitch }}>{player.name?.[0] || "?"}</span>
+            </div>
+          )}
+          {goals > 0 && (
+            <div style={{ position: "absolute", bottom: -4, right: -4, width: 40, height: 40, borderRadius: 999, background: C.pitch, border: `2px solid ${C.chalk}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+              <span className="f-display" style={{ fontSize: 13, color: C.chalk, lineHeight: 1 }}>{goals}</span>
+              <span className="f-mono" style={{ fontSize: 6, color: C.chalk, opacity: 0.8, letterSpacing: 0.5 }}>GOALS</span>
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "center", gap: 28, marginBottom: 16 }}>
+          <div>
+            <div className="f-display" style={{ fontSize: 22, color: C.pitch }}>{player.age || "—"}</div>
+            <div className="f-mono" style={{ fontSize: 9.5, color: C.soil, opacity: 0.5, letterSpacing: 0.5 }}>AGE</div>
+          </div>
+          <div>
+            <div className="f-display" style={{ fontSize: 22, color: C.pitch }}>{player.number || "—"}</div>
+            <div className="f-mono" style={{ fontSize: 9.5, color: C.soil, opacity: 0.5, letterSpacing: 0.5 }}>NUMBER</div>
+          </div>
+        </div>
+
+        {player.position && (
+          <span className="f-mono" style={{ display: "inline-block", background: C.rust, color: C.chalk, fontSize: 12, fontWeight: 700, letterSpacing: 0.5, padding: "6px 16px", borderRadius: 999 }}>
+            {player.position.toUpperCase()}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function computePlayerGoals(matches, teamId, playerName) {
+  const key = playerName.trim().toLowerCase();
+  let total = 0;
+  matches.forEach((m) => {
+    (m.scorers || []).forEach((s) => {
+      if (s.teamId === teamId && s.name.trim().toLowerCase() === key) total += Number(s.goals) || 0;
+    });
+  });
+  return total;
+}
+
 function TeamProfile({ team, players, matches, onClose }) {
+  const [selectedPlayerId, setSelectedPlayerId] = useState(null);
   if (!team) return null;
   const record = computeStandings([team], matches)[0];
   const roster = players.filter((p) => playerTeamIds(p).includes(team.id));
-  const goalsFor = (player) => {
-    const key = player.name.trim().toLowerCase();
-    let total = 0;
-    matches.forEach((m) => {
-      (m.scorers || []).forEach((s) => {
-        if (s.teamId === team.id && s.name.trim().toLowerCase() === key) total += Number(s.goals) || 0;
-      });
-    });
-    return total;
-  };
+
+  const selectedPlayer = roster.find((p) => p.id === selectedPlayerId);
+  if (selectedPlayer) {
+    return <PlayerProfile player={selectedPlayer} team={team} goals={computePlayerGoals(matches, team.id, selectedPlayer.name)} onClose={() => setSelectedPlayerId(null)} />;
+  }
 
   return (
     <div style={{ paddingBottom: 90 }}>
@@ -782,17 +804,35 @@ function TeamProfile({ team, players, matches, onClose }) {
           </div>
         )}
         {(team.manager || team.headCoach) && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
             {team.manager && (
-              <div className="f-body" style={{ fontSize: 12.5, color: C.soil, opacity: 0.75, display: "flex", alignItems: "center", gap: 6 }}>
-                {team.managerPhotoUrl && <img src={team.managerPhotoUrl} alt="" style={{ width: 22, height: 22, borderRadius: 999, objectFit: "cover" }} />}
-                <span><b>Manager:</b> {team.manager}</span>
+              <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, background: C.sand || "#F2E9D8", borderRadius: 10, padding: 8 }}>
+                {team.managerPhotoUrl ? (
+                  <img src={team.managerPhotoUrl} alt="" style={{ width: 48, height: 48, borderRadius: 999, objectFit: "cover", flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: 48, height: 48, borderRadius: 999, background: C.line, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span className="f-display" style={{ fontSize: 16, color: C.pitch }}>{team.manager?.[0] || "?"}</span>
+                  </div>
+                )}
+                <div>
+                  <div className="f-mono" style={{ fontSize: 9, color: C.soil, opacity: 0.5, letterSpacing: 0.5 }}>MANAGER</div>
+                  <div className="f-body" style={{ fontSize: 12.5, color: C.soil, fontWeight: 600 }}>{team.manager}</div>
+                </div>
               </div>
             )}
             {team.headCoach && (
-              <div className="f-body" style={{ fontSize: 12.5, color: C.soil, opacity: 0.75, display: "flex", alignItems: "center", gap: 6 }}>
-                {team.headCoachPhotoUrl && <img src={team.headCoachPhotoUrl} alt="" style={{ width: 22, height: 22, borderRadius: 999, objectFit: "cover" }} />}
-                <span><b>Head Coach:</b> {team.headCoach}</span>
+              <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, background: C.sand || "#F2E9D8", borderRadius: 10, padding: 8 }}>
+                {team.headCoachPhotoUrl ? (
+                  <img src={team.headCoachPhotoUrl} alt="" style={{ width: 48, height: 48, borderRadius: 999, objectFit: "cover", flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: 48, height: 48, borderRadius: 999, background: C.line, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span className="f-display" style={{ fontSize: 16, color: C.pitch }}>{team.headCoach?.[0] || "?"}</span>
+                  </div>
+                )}
+                <div>
+                  <div className="f-mono" style={{ fontSize: 9, color: C.soil, opacity: 0.5, letterSpacing: 0.5 }}>HEAD COACH</div>
+                  <div className="f-body" style={{ fontSize: 12.5, color: C.soil, fontWeight: 600 }}>{team.headCoach}</div>
+                </div>
               </div>
             )}
           </div>
@@ -821,9 +861,9 @@ function TeamProfile({ team, players, matches, onClose }) {
         {roster.length === 0 && <div className="f-body" style={{ fontSize: 12.5, color: C.soil, opacity: 0.5 }}>No players added yet.</div>}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {roster.map((p) => {
-            const goals = goalsFor(p);
+            const goals = computePlayerGoals(matches, team.id, p.name);
             return (
-              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div key={p.id} onClick={() => setSelectedPlayerId(p.id)} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
                 {p.photoUrl ? (
                   <img src={p.photoUrl} alt="" style={{ width: 36, height: 36, borderRadius: 999, objectFit: "cover" }} />
                 ) : (
@@ -836,6 +876,7 @@ function TeamProfile({ team, players, matches, onClose }) {
                   {p.position && <div className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.5 }}>{p.position}</div>}
                 </div>
                 {goals > 0 && <div className="f-mono" style={{ fontSize: 11.5, color: C.pitch, fontWeight: 700 }}>⚽ {goals}</div>}
+                <ChevronRight size={14} color={C.soil} style={{ opacity: 0.35 }} />
               </div>
             );
           })}
@@ -933,7 +974,7 @@ function TransfersTab({ transfers, teamName, onTeamTap }) {
   );
 }
 
-function SearchTab({ teams, players, competitions, matches, teamName, onOpenTeam, onOpenCompetition, onOpenMatches, onClose }) {
+function SearchTab({ teams, players, competitions, matches, teamName, onOpenTeam, onOpenPlayer, onOpenCompetition, onOpenMatches, onClose }) {
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
 
@@ -1007,12 +1048,18 @@ function SearchTab({ teams, players, competitions, matches, teamName, onOpenTeam
               const ids = playerTeamIds(p);
               return (
                 <div key={p.id} style={{ padding: "10px 12px", borderBottom: `1px solid ${C.line}` }}>
-                  <div className="f-body" style={{ fontSize: 13.5, fontWeight: 600, color: C.soil, marginBottom: ids.length ? 6 : 0 }}>{p.name}</div>
+                  <div
+                    onClick={() => onOpenPlayer(p.id, ids[0] || null)}
+                    className="f-body"
+                    style={{ fontSize: 13.5, fontWeight: 600, color: C.soil, marginBottom: ids.length ? 6 : 0, cursor: "pointer" }}
+                  >
+                    {p.name}
+                  </div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {ids.map((tid) => (
                       <button
                         key={tid}
-                        onClick={() => onOpenTeam(tid)}
+                        onClick={() => onOpenPlayer(p.id, tid)}
                         style={{ background: C.sand || "#F2E9D8", border: "none", borderRadius: 999, padding: "4px 10px", fontSize: 11, fontFamily: "'Work Sans', sans-serif", color: C.soil, cursor: "pointer" }}
                       >
                         {teamName(tid)}
@@ -1069,9 +1116,176 @@ function ScorersTab({ matches, teamName }) {
   );
 }
 
-function CompetitionProfile({ competition, teams, matches, teamName, teamGroup, votedMatches, onVote, onTeamTap, onClose }) {
+function MatchDetail({ match, teamName, players, votedMatches, onVote, onTeamTap, onClose }) {
+  const [section, setSection] = useState("lineups");
+  if (!match) return null;
+
+  const a = match.teamAName || teamName(match.teamAId);
+  const b = match.teamBName || teamName(match.teamBId);
+  const teamARoster = players.filter((p) => playerTeamIds(p).includes(match.teamAId));
+  const teamBRoster = players.filter((p) => playerTeamIds(p).includes(match.teamBId));
+  const lineupAIds = (match.lineups && match.lineups.teamA) || [];
+  const lineupBIds = (match.lineups && match.lineups.teamB) || [];
+  const lineupA = teamARoster.filter((p) => lineupAIds.includes(p.id));
+  const lineupB = teamBRoster.filter((p) => lineupBIds.includes(p.id));
+
+  const scorers = match.scorers || [];
+  const cards = match.cards || [];
+  const commentary = match.commentary || [];
+  const motm = match.motm || { candidates: [], votes: {} };
+  const hasVoted = votedMatches.has(match.id);
+  const totalVotes = Object.values(motm.votes || {}).reduce((s, v) => s + v, 0);
+
+  return (
+    <div style={{ paddingBottom: 90 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+        <button onClick={onClose} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 999, padding: "6px 12px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer" }}>
+          <span className="f-body" style={{ fontSize: 12, fontWeight: 700, color: C.chalk }}>✕ Close</span>
+        </button>
+      </div>
+
+      <div style={{ background: C.chalk, borderRadius: 14, padding: 16, border: `1px solid ${C.line}`, marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <StatusPill status={match.status} />
+          <div className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.55, display: "flex", alignItems: "center", gap: 4 }}>
+            <Clock size={11} /> {match.time}
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div
+            onClick={() => onTeamTap && match.teamAId && onTeamTap(match.teamAId)}
+            className="f-body"
+            style={{ fontSize: 15, fontWeight: 600, color: C.soil, flex: 1, cursor: onTeamTap && match.teamAId ? "pointer" : "default" }}
+          >
+            {a}
+          </div>
+          {match.status === "upcoming" ? (
+            <div className="f-mono" style={{ fontSize: 13, color: C.soil, opacity: 0.4, padding: "0 10px" }}>vs</div>
+          ) : (
+            <div className="f-display" style={{ fontSize: 28, color: C.pitch, padding: "0 10px", letterSpacing: 1 }}>{match.scoreA}&nbsp;–&nbsp;{match.scoreB}</div>
+          )}
+          <div
+            onClick={() => onTeamTap && match.teamBId && onTeamTap(match.teamBId)}
+            className="f-body"
+            style={{ fontSize: 15, fontWeight: 600, color: C.soil, flex: 1, textAlign: "right", cursor: onTeamTap && match.teamBId ? "pointer" : "default" }}
+          >
+            {b}
+          </div>
+        </div>
+        <div className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.45, marginTop: 10, display: "flex", alignItems: "center", gap: 4 }}>
+          <MapPin size={11} /> {match.venue} · {match.date}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+        {[{ key: "lineups", label: "Lineups" }, { key: "events", label: "Events" }, { key: "commentary", label: "Commentary" }].map((s) => (
+          <button
+            key={s.key}
+            onClick={() => setSection(s.key)}
+            style={{
+              flex: 1, border: "none", borderRadius: 999, padding: "8px 10px", fontSize: 12.5,
+              fontFamily: "'Work Sans', sans-serif", fontWeight: 700, cursor: "pointer",
+              background: section === s.key ? C.ochre : "rgba(255,255,255,0.1)",
+              color: C.chalk, opacity: section === s.key ? 1 : 0.6,
+            }}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {section === "lineups" && (
+        <div style={{ background: C.chalk, borderRadius: 14, padding: 16, border: `1px solid ${C.line}`, display: "flex", gap: 16 }}>
+          <div style={{ flex: 1 }}>
+            <div className="f-mono" style={{ fontSize: 10, letterSpacing: 1, color: C.ochre, marginBottom: 8, fontWeight: 700 }}>{a.toUpperCase()}</div>
+            {lineupA.length === 0 && <div className="f-body" style={{ fontSize: 12, color: C.soil, opacity: 0.5 }}>Lineup not announced yet.</div>}
+            {lineupA.map((p) => (
+              <div key={p.id} className="f-body" style={{ fontSize: 12.5, color: C.soil, padding: "4px 0" }}>
+                {p.number ? `#${p.number} ` : ""}{p.name}{p.position ? <span style={{ opacity: 0.5 }}> · {p.position}</span> : null}
+              </div>
+            ))}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div className="f-mono" style={{ fontSize: 10, letterSpacing: 1, color: C.ochre, marginBottom: 8, fontWeight: 700 }}>{b.toUpperCase()}</div>
+            {lineupB.length === 0 && <div className="f-body" style={{ fontSize: 12, color: C.soil, opacity: 0.5 }}>Lineup not announced yet.</div>}
+            {lineupB.map((p) => (
+              <div key={p.id} className="f-body" style={{ fontSize: 12.5, color: C.soil, padding: "4px 0" }}>
+                {p.number ? `#${p.number} ` : ""}{p.name}{p.position ? <span style={{ opacity: 0.5 }}> · {p.position}</span> : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {section === "events" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ background: C.chalk, borderRadius: 14, padding: 16, border: `1px solid ${C.line}` }}>
+            <div className="f-mono" style={{ fontSize: 10, letterSpacing: 1, color: C.ochre, marginBottom: 8, fontWeight: 700 }}>GOALS</div>
+            {scorers.length === 0 && <div className="f-body" style={{ fontSize: 12, color: C.soil, opacity: 0.5 }}>No goals recorded.</div>}
+            {scorers.map((s) => (
+              <div key={s.id} className="f-body" style={{ fontSize: 12.5, color: C.soil, padding: "3px 0" }}>⚽ {s.name}{s.goals > 1 ? ` (${s.goals})` : ""}</div>
+            ))}
+          </div>
+
+          <div style={{ background: C.chalk, borderRadius: 14, padding: 16, border: `1px solid ${C.line}` }}>
+            <div className="f-mono" style={{ fontSize: 10, letterSpacing: 1, color: C.ochre, marginBottom: 8, fontWeight: 700 }}>CARDS</div>
+            {cards.length === 0 && <div className="f-body" style={{ fontSize: 12, color: C.soil, opacity: 0.5 }}>No cards recorded.</div>}
+            {cards.map((c) => (
+              <div key={c.id} className="f-body" style={{ fontSize: 12.5, color: C.soil, padding: "3px 0" }}>{c.type === "yellow" ? "🟨" : "🟥"} {c.name}</div>
+            ))}
+          </div>
+
+          {motm.candidates.length > 0 && (
+            <div style={{ background: C.chalk, borderRadius: 14, padding: 16, border: `1px solid ${C.line}` }}>
+              <div className="f-mono" style={{ fontSize: 10, letterSpacing: 1, color: C.ochre, marginBottom: 8, fontWeight: 700 }}>MAN OF THE MATCH</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {motm.candidates.map((cand) => {
+                  const votes = (motm.votes || {})[cand.id] || 0;
+                  const pct = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+                  return (
+                    <button
+                      key={cand.id}
+                      disabled={hasVoted}
+                      onClick={() => !hasVoted && onVote(match.id, cand.id)}
+                      style={{
+                        position: "relative", overflow: "hidden", textAlign: "left", border: `1px solid ${C.line}`, borderRadius: 9,
+                        padding: "8px 10px", background: C.chalk, cursor: hasVoted ? "default" : "pointer",
+                      }}
+                    >
+                      {hasVoted && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pct}%`, background: "rgba(198,138,61,0.18)", zIndex: 0 }} />}
+                      <div style={{ position: "relative", zIndex: 1, display: "flex", justifyContent: "space-between" }}>
+                        <span className="f-body" style={{ fontSize: 13, color: C.soil, fontWeight: 600 }}>{cand.name}</span>
+                        {hasVoted && <span className="f-mono" style={{ fontSize: 11, color: C.soil, opacity: 0.6 }}>{votes} · {pct}%</span>}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              {!hasVoted && <div className="f-body" style={{ fontSize: 11, color: C.soil, opacity: 0.5, marginTop: 6 }}>Tap a name to vote — one vote per device.</div>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {section === "commentary" && (
+        <div style={{ background: C.chalk, borderRadius: 14, padding: 16, border: `1px solid ${C.line}` }}>
+          {commentary.length === 0 && <div className="f-body" style={{ fontSize: 12, color: C.soil, opacity: 0.5 }}>No commentary yet.</div>}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {[...commentary].reverse().map((c) => (
+              <div key={c.id} style={{ display: "flex", gap: 8 }}>
+                <span className="f-mono" style={{ fontSize: 11, color: C.pitch, fontWeight: 700, flexShrink: 0 }}>{c.minute}'</span>
+                <span className="f-body" style={{ fontSize: 12.5, color: C.soil, opacity: 0.85 }}>{c.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CompetitionProfile({ competition, teams, matches, teamName, teamGroup, votedMatches, onVote, onTeamTap, onOpenMatch, onClose }) {
   const [section, setSection] = useState("table");
-  const [expandedId, setExpandedId] = useState(null);
   if (!competition) return null;
 
   const groups = [
@@ -1093,13 +1307,13 @@ function CompetitionProfile({ competition, teams, matches, teamName, teamGroup, 
         {competition.subtitle && <div className="f-mono" style={{ fontSize: 10.5, color: C.chalk, opacity: 0.55, marginTop: 4 }}>{competition.subtitle}</div>}
       </div>
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
-        {[{ key: "table", label: "Table" }, { key: "scorers", label: "Scorers" }, { key: "matches", label: "Matches" }].map((s) => (
+      <div style={{ display: "flex", gap: 6, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
+        {[{ key: "table", label: "Table" }, { key: "scorers", label: "Scorers" }, { key: "matches", label: "Matches" }, { key: "knockout", label: "Knockout" }].map((s) => (
           <button
             key={s.key}
             onClick={() => setSection(s.key)}
             style={{
-              flex: 1, border: "none", borderRadius: 999, padding: "8px 10px", fontSize: 12.5,
+              flexShrink: 0, border: "none", borderRadius: 999, padding: "8px 12px", fontSize: 12.5,
               fontFamily: "'Work Sans', sans-serif", fontWeight: 700, cursor: "pointer",
               background: section === s.key ? C.ochre : "rgba(255,255,255,0.1)",
               color: C.chalk, opacity: section === s.key ? 1 : 0.6,
@@ -1122,13 +1336,36 @@ function CompetitionProfile({ competition, teams, matches, teamName, teamGroup, 
                 <div className="f-mono" style={{ fontSize: 11, letterSpacing: 2, color: C.ochre, marginBottom: 10, fontWeight: 700 }}>{g.label.toUpperCase()}</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {list.map((m) => (
-                    <MatchCard key={m.id} match={m} teamName={teamName} teamGroup={teamGroup} getCompetitionName={null} expanded={expandedId === m.id} onToggle={() => setExpandedId(expandedId === m.id ? null : m.id)} votedMatches={votedMatches} onVote={onVote} onTeamTap={onTeamTap} />
+                    <MatchCard key={m.id} match={m} teamName={teamName} teamGroup={teamGroup} getCompetitionName={null} onOpenMatch={onOpenMatch} onTeamTap={onTeamTap} />
                   ))}
                 </div>
               </div>
             );
           })}
           {matches.length === 0 && <div className="f-body" style={{ color: C.chalk, opacity: 0.6, textAlign: "center", marginTop: 30 }}>No matches scheduled yet.</div>}
+        </div>
+      )}
+      {section === "knockout" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+          {["Quarter-Final", "Semi-Final", "3rd Place", "Final"].map((stageName) => {
+            const list = matches.filter((m) => m.stage === stageName).sort((a, b) => (a.date < b.date ? 1 : -1));
+            if (!list.length) return null;
+            return (
+              <div key={stageName}>
+                <div className="f-mono" style={{ fontSize: 11, letterSpacing: 2, color: C.ochre, marginBottom: 10, fontWeight: 700 }}>{stageName.toUpperCase()}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {list.map((m) => (
+                    <MatchCard key={m.id} match={m} teamName={teamName} teamGroup={teamGroup} getCompetitionName={null} onOpenMatch={onOpenMatch} onTeamTap={onTeamTap} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          {matches.filter((m) => m.stage && m.stage !== "Group Stage" && m.stage !== "Friendly").length === 0 && (
+            <div className="f-body" style={{ color: C.chalk, opacity: 0.6, textAlign: "center", marginTop: 30 }}>
+              No knockout fixtures yet. Add a Quarter-Final, Semi-Final, 3rd Place, or Final fixture from Admin once the group stage wraps up.
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1146,7 +1383,7 @@ function Field({ label, children }) {
 const inputStyle = { width: "100%", boxSizing: "border-box", padding: "9px 11px", borderRadius: 9, border: `1px solid ${C.line}`, fontSize: 14, fontFamily: "'Work Sans', sans-serif", background: C.chalk, color: C.soil };
 const btnStyle = (bg, color) => ({ background: bg, color, border: "none", borderRadius: 9, padding: "9px 14px", fontSize: 13, fontWeight: 700, fontFamily: "'Work Sans', sans-serif", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 });
 
-function MatchManagementRow({ match, teamName_, updateMatch, removeMatch }) {
+function MatchManagementRow({ match, teamName_, updateMatch, removeMatch, players }) {
   const [expanded, setExpanded] = useState(false);
   return (
     <div style={{ background: C.chalk, borderRadius: 14, padding: 12, border: `1px solid ${C.line}` }}>
@@ -1175,7 +1412,9 @@ function MatchManagementRow({ match, teamName_, updateMatch, removeMatch }) {
               <option value="finished">Finished</option>
             </select>
           </div>
+          <LineupRow match={match} updateMatch={updateMatch} players={players} />
           <ScorerRow match={match} updateMatch={updateMatch} />
+          <CardsRow match={match} updateMatch={updateMatch} />
           <CommentaryRow match={match} updateMatch={updateMatch} />
           <MotmRow match={match} updateMatch={updateMatch} />
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
@@ -1222,6 +1461,81 @@ function ScorerRow({ match, updateMatch }) {
   );
 }
 
+function CardsRow({ match, updateMatch }) {
+  const [name, setName] = useState("");
+  const [teamId, setTeamId] = useState(match.teamAId);
+  const [type, setType] = useState("yellow");
+  const cards = match.cards || [];
+
+  const addCard = () => {
+    if (!name.trim()) return;
+    updateMatch(match.id, { cards: [...cards, { id: uid(), name: name.trim(), teamId, type }] });
+    setName("");
+  };
+  const removeCard = (id) => updateMatch(match.id, { cards: cards.filter((c) => c.id !== id) });
+
+  return (
+    <div style={{ marginTop: 8, borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
+      <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginBottom: 6 }}>CARDS</div>
+      {cards.map((c) => (
+        <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5, padding: "4px 0" }} className="f-body">
+          <span style={{ color: C.soil }}>{c.type === "yellow" ? "🟨" : "🟥"} {c.name}</span>
+          <button onClick={() => removeCard(c.id)} style={{ background: "none", border: "none", cursor: "pointer" }}><Trash2 size={12} color={C.rust} /></button>
+        </div>
+      ))}
+      <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+        <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px" }} placeholder="Player name" value={name} onChange={(e) => setName(e.target.value)} />
+        <select style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 70 }} value={teamId} onChange={(e) => setTeamId(e.target.value)}>
+          <option value={match.teamAId}>Home</option>
+          <option value={match.teamBId}>Away</option>
+        </select>
+        <select style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 60 }} value={type} onChange={(e) => setType(e.target.value)}>
+          <option value="yellow">🟨</option>
+          <option value="red">🟥</option>
+        </select>
+        <button onClick={addCard} style={{ ...btnStyle(C.pitch, C.chalk), padding: "7px 9px" }}><Plus size={13} /></button>
+      </div>
+    </div>
+  );
+}
+
+function LineupRow({ match, updateMatch, players }) {
+  const teamARoster = players.filter((p) => playerTeamIds(p).includes(match.teamAId));
+  const teamBRoster = players.filter((p) => playerTeamIds(p).includes(match.teamBId));
+  const lineupA = (match.lineups && match.lineups.teamA) || [];
+  const lineupB = (match.lineups && match.lineups.teamB) || [];
+
+  const toggle = (side, playerId) => {
+    const key = side === "A" ? "teamA" : "teamB";
+    const current = (match.lineups && match.lineups[key]) || [];
+    const next = current.includes(playerId) ? current.filter((id) => id !== playerId) : [...current, playerId];
+    updateMatch(match.id, { lineups: { ...(match.lineups || {}), [key]: next } });
+  };
+
+  const Side = ({ label, roster, lineup, side }) => (
+    <div style={{ flex: 1 }}>
+      <div className="f-mono" style={{ fontSize: 9.5, opacity: 0.5, color: C.soil, marginBottom: 4 }}>{label}</div>
+      {roster.length === 0 && <div className="f-body" style={{ fontSize: 11, color: C.soil, opacity: 0.5 }}>No roster on file.</div>}
+      {roster.map((p) => (
+        <label key={p.id} className="f-body" style={{ fontSize: 12, color: C.soil, display: "flex", alignItems: "center", gap: 5, padding: "2px 0" }}>
+          <input type="checkbox" checked={lineup.includes(p.id)} onChange={() => toggle(side, p.id)} />
+          {p.name}{p.number ? ` #${p.number}` : ""}
+        </label>
+      ))}
+    </div>
+  );
+
+  return (
+    <div style={{ marginTop: 8, borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
+      <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginBottom: 6 }}>LINEUPS — tick who's playing</div>
+      <div style={{ display: "flex", gap: 10 }}>
+        <Side label="HOME" roster={teamARoster} lineup={lineupA} side="A" />
+        <Side label="AWAY" roster={teamBRoster} lineup={lineupB} side="B" />
+      </div>
+    </div>
+  );
+}
+
 const COMMENTARY_PRESETS = [
   { label: "⚽ Kickoff", text: "Kickoff! The match is underway." },
   { label: "⚽ Goal", text: "GOAL!" },
@@ -1255,6 +1569,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
   const [badgeUploading, setBadgeUploading] = useState(false);
   const [playerName, setPlayerName] = useState("");
   const [playerNumber, setPlayerNumber] = useState("");
+  const [playerAge, setPlayerAge] = useState("");
   const [playerPosition, setPlayerPosition] = useState("");
   const [playerPhotoUrl, setPlayerPhotoUrl] = useState("");
   const [playerPhotoUploading, setPlayerPhotoUploading] = useState(false);
@@ -1285,7 +1600,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
     if (!file) return;
     setBadgeUploading(true);
     try {
-      const url = await uploadImage(file);
+      const url = await uploadImage(file, 400);
       updateTeam(team.id, { badgeUrl: url });
     } catch (err) {
       console.error("Badge upload failed", err);
@@ -1300,7 +1615,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
     if (!file) return;
     setManagerPhotoUploading(true);
     try {
-      const url = await uploadImage(file);
+      const url = await uploadImage(file, 400);
       setManagerPhotoUrl(url);
       updateTeam(team.id, { managerPhotoUrl: url });
     } catch (err) {
@@ -1316,7 +1631,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
     if (!file) return;
     setHeadCoachPhotoUploading(true);
     try {
-      const url = await uploadImage(file);
+      const url = await uploadImage(file, 400);
       setHeadCoachPhotoUrl(url);
       updateTeam(team.id, { headCoachPhotoUrl: url });
     } catch (err) {
@@ -1332,7 +1647,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
     if (!file) return;
     setPlayerPhotoUploading(true);
     try {
-      const url = await uploadImage(file);
+      const url = await uploadImage(file, 400);
       setPlayerPhotoUrl(url);
     } catch (err) {
       console.error("Player photo upload failed", err);
@@ -1344,8 +1659,8 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
 
   const addPlayer = () => {
     if (!playerName.trim() || playerPhotoUploading) return;
-    setPlayers([...players, { id: uid(), teamIds: [team.id], name: playerName.trim(), number: playerNumber.trim(), position: playerPosition.trim(), photoUrl: playerPhotoUrl || null }]);
-    setPlayerName(""); setPlayerNumber(""); setPlayerPosition(""); setPlayerPhotoUrl("");
+    setPlayers([...players, { id: uid(), teamIds: [team.id], name: playerName.trim(), number: playerNumber.trim(), age: playerAge.trim(), position: playerPosition.trim(), photoUrl: playerPhotoUrl || null }]);
+    setPlayerName(""); setPlayerNumber(""); setPlayerAge(""); setPlayerPosition(""); setPlayerPhotoUrl("");
   };
   // Removes this player from THIS team's roster only. If they have no other
   // team affiliations left afterward, the player record itself is removed.
@@ -1405,7 +1720,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
               </div>
             </div>
           )}
-          <Field label="Badge / logo">
+               <Field label="Badge / logo">
             <input type="file" accept="image/*" onChange={handleBadgeSelect} style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px" }} />
             {badgeUploading && <div className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.6, marginTop: 4 }}>Uploading…</div>}
           </Field>
@@ -1415,7 +1730,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
             <div>
               <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px" }} placeholder="Manager name" value={manager} onChange={(e) => setManager(e.target.value)} />
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                {managerPhotoUrl && <img src={managerPhotoUrl} alt="" style={{ width: 30, height: 30, borderRadius: 999, objectFit: "cover" }} />}
+                {managerPhotoUrl && <img src={managerPhotoUrl} alt="" style={{ width: 44, height: 44, borderRadius: 999, objectFit: "cover" }} />}
                 <input type="file" accept="image/*" onChange={handleManagerPhotoSelect} style={{ ...inputStyle, fontSize: 11, padding: "5px 8px", flex: 1 }} />
               </div>
               {managerPhotoUploading && <div className="f-mono" style={{ fontSize: 10, color: C.soil, opacity: 0.6, marginTop: 2 }}>Uploading…</div>}
@@ -1424,7 +1739,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
             <div>
               <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px" }} placeholder="Head coach name" value={headCoach} onChange={(e) => setHeadCoach(e.target.value)} />
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                {headCoachPhotoUrl && <img src={headCoachPhotoUrl} alt="" style={{ width: 30, height: 30, borderRadius: 999, objectFit: "cover" }} />}
+                {headCoachPhotoUrl && <img src={headCoachPhotoUrl} alt="" style={{ width: 44, height: 44, borderRadius: 999, objectFit: "cover" }} />}
                 <input type="file" accept="image/*" onChange={handleHeadCoachPhotoSelect} style={{ ...inputStyle, fontSize: 11, padding: "5px 8px", flex: 1 }} />
               </div>
               {headCoachPhotoUploading && <div className="f-mono" style={{ fontSize: 10, color: C.soil, opacity: 0.6, marginTop: 2 }}>Uploading…</div>}
@@ -1479,6 +1794,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", flex: 1, minWidth: 100 }} placeholder="Player name" value={playerName} onChange={(e) => setPlayerName(e.target.value)} />
             <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 50 }} placeholder="No." value={playerNumber} onChange={(e) => setPlayerNumber(e.target.value)} />
+            <input type="number" min={0} style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 55 }} placeholder="Age" value={playerAge} onChange={(e) => setPlayerAge(e.target.value)} />
             <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 90 }} placeholder="Position" value={playerPosition} onChange={(e) => setPlayerPosition(e.target.value)} />
           </div>
           <div style={{ marginTop: 6 }}>
@@ -1700,8 +2016,8 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
     setTeams([...teams, { id: uid(), name: globalTeamName.trim(), competitions: [] }]);
     setGlobalTeamName("");
   };
-  
-      const recordTransfer = () => {
+
+  const recordTransfer = () => {
     const player = players.find((p) => p.id === transferPlayerId);
     if (!player || !transferToTeamId || !transferDate) return;
     setTransfers([...transfers, {
@@ -1767,7 +2083,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
     if (!file) return;
     setSponsorLogoUploading(true);
     try {
-      const url = await uploadImage(file);
+      const url = await uploadImage(file, 400);
       setSponsorLogoUrl(url);
     } catch (err) {
       console.error("Logo upload failed", err);
@@ -1788,7 +2104,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
     if (!file) return;
     setAdImageUploading(true);
     try {
-      const url = await uploadImage(file);
+      const url = await uploadImage(file, 900);
       setAdImageUrl(url);
     } catch (err) {
       console.error("Ad image upload failed", err);
@@ -1911,7 +2227,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {friendlyMatches.map((m) => (
-            <MatchManagementRow key={m.id} match={m} teamName_={teamName_} updateMatch={updateMatch} removeMatch={removeMatch} />
+            <MatchManagementRow key={m.id} match={m} teamName_={teamName_} updateMatch={updateMatch} removeMatch={removeMatch} players={players} />
           ))}
           {friendlyMatches.length === 0 && <div className="f-body" style={{ fontSize: 12, color: C.chalk, opacity: 0.5 }}>No friendlies yet.</div>}
         </div>
@@ -2052,7 +2368,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
                 </button>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {competitionMatches.map((m) => (
-                    <MatchManagementRow key={m.id} match={m} teamName_={teamName_} updateMatch={updateMatch} removeMatch={removeMatch} />
+                    <MatchManagementRow key={m.id} match={m} teamName_={teamName_} updateMatch={updateMatch} removeMatch={removeMatch} players={players} />
                   ))}
                   {competitionMatches.length === 0 && <div className="f-body" style={{ fontSize: 12, color: C.soil, opacity: 0.5 }}>No fixtures yet for this competition.</div>}
                 </div>
@@ -2159,8 +2475,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
     </div>
   );
 }
-
-export default function AuyoFootballApp() {
+      export default function AuyoFootballApp() {
   const [competitions, setCompetitionsState] = useState([]);
   const [teams, setTeamsState] = useState([]);
   const [matches, setMatchesState] = useState([]);
@@ -2174,6 +2489,9 @@ export default function AuyoFootballApp() {
   const [previousTab, setPreviousTab] = useState("scores");
   const [selectedTeamId, setSelectedTeamId] = useState(null);
   const [selectedCompetitionId, setSelectedCompetitionId] = useState(null);
+  const [selectedPlayerId, setSelectedPlayerId] = useState(null);
+  const [selectedPlayerTeamId, setSelectedPlayerTeamId] = useState(null);
+  const [selectedMatchId, setSelectedMatchId] = useState(null);
   const [unlocked, setUnlocked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -2382,7 +2700,7 @@ export default function AuyoFootballApp() {
               </div>
             ) : (
               <>
-                {tab === "scores" && <MatchesTab matches={matches} teamName={teamName} teamGroup={teamGroup} competitions={competitions} votedMatches={votedMatches} onVote={onVote} onTeamTap={(teamId) => { setPreviousTab(tab); setSelectedTeamId(teamId); setTab("teams"); }} onCompetitionTap={(competitionId) => { setPreviousTab(tab); setSelectedCompetitionId(competitionId); setTab("competition"); }} />}
+                {tab === "scores" && <MatchesTab matches={matches} teamName={teamName} teamGroup={teamGroup} competitions={competitions} votedMatches={votedMatches} onVote={onVote} onTeamTap={(teamId) => { setPreviousTab(tab); setSelectedTeamId(teamId); setTab("teams"); }} onCompetitionTap={(competitionId) => { setPreviousTab(tab); setSelectedCompetitionId(competitionId); setTab("competition"); }} onOpenMatch={(matchId) => { setPreviousTab(tab); setSelectedMatchId(matchId); setTab("match"); }} />}
                 {tab === "competition" && (
                   <CompetitionProfile
                     competition={competitions.find((c) => c.id === selectedCompetitionId)}
@@ -2390,10 +2708,22 @@ export default function AuyoFootballApp() {
                     matches={matches.filter((m) => m.competitionId === selectedCompetitionId)}
                     teamName={teamName} teamGroup={teamGroup} votedMatches={votedMatches} onVote={onVote}
                     onTeamTap={(teamId) => { setPreviousTab("competition"); setSelectedTeamId(teamId); setTab("teams"); }}
+                    onOpenMatch={(matchId) => { setPreviousTab("competition"); setSelectedMatchId(matchId); setTab("match"); }}
                     onClose={() => { setSelectedCompetitionId(null); setTab(previousTab); }}
                   />
                 )}
                 {tab === "teams" && <TeamsTab competition={activeCompetition} teams={teams} players={players} matches={matches} selectedTeamId={selectedTeamId} setSelectedTeamId={setSelectedTeamId} onClose={() => { setSelectedTeamId(null); setTab(previousTab); }} />}
+                {tab === "match" && (() => {
+                  const m = matches.find((mm) => mm.id === selectedMatchId);
+                  if (!m) return null;
+                  return (
+                    <MatchDetail
+                      match={m} teamName={teamName} players={players} votedMatches={votedMatches} onVote={onVote}
+                      onTeamTap={(teamId) => { setSelectedTeamId(teamId); setTab("teams"); }}
+                      onClose={() => { setSelectedMatchId(null); setTab(previousTab); }}
+                    />
+                  );
+                })()}
                 {tab === "transfers" && <TransfersTab transfers={transfers} teamName={teamName} onTeamTap={(teamId) => { setPreviousTab(tab); setSelectedTeamId(teamId); setTab("teams"); }} />}
                 {tab === "news" && <NewsTab news={news} setNews={setNews} likedPosts={likedPosts} toggleLike={toggleLike} />}
                 {tab === "search" && (
@@ -2403,11 +2733,28 @@ export default function AuyoFootballApp() {
                       setSelectedTeamId(teamId);
                       setTab("teams");
                     }}
+                    onOpenPlayer={(playerId, teamId) => {
+                      setSelectedPlayerId(playerId);
+                      setSelectedPlayerTeamId(teamId);
+                      setTab("player");
+                    }}
                     onOpenCompetition={(competitionId) => { setSelectedCompetitionId(competitionId); setTab("competition"); }}
                     onOpenMatches={() => setTab("scores")}
                     onClose={() => setTab(previousTab)}
                   />
                 )}
+                {tab === "player" && (() => {
+                  const p = players.find((pl) => pl.id === selectedPlayerId);
+                  if (!p) return null;
+                  const t = teams.find((tm) => tm.id === selectedPlayerTeamId) || null;
+                  return (
+                    <PlayerProfile
+                      player={p} team={t}
+                      goals={t ? computePlayerGoals(matches, t.id, p.name) : 0}
+                      onClose={() => { setSelectedPlayerId(null); setSelectedPlayerTeamId(null); setTab(previousTab); }}
+                    />
+                  );
+                })()}
                 {tab === "legal" && <LegalTab onClose={() => setTab(previousTab)} />}
                 {tab === "admin" && isAdminAccess && (
                   <AdminTab
