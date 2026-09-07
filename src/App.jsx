@@ -754,6 +754,86 @@ function PlayerProfile({ player, team, goals, onClose }) {
   );
 }
 
+// Buckets a player's free-text position (e.g. "CB", "Striker", "CDM") into
+// one of four pitch rows, since we don't collect exact x/y coordinates.
+function positionRow(position) {
+  const p = (position || "").toLowerCase();
+  if (/\bgk\b|goalkeeper|keeper/.test(p)) return "gk";
+  if (/\b(cb|lb|rb|lwb|rwb|def|back)\b/.test(p)) return "def";
+  if (/\b(st|cf|fw|forward|striker|wing)\b/.test(p)) return "fwd";
+  return "mid";
+}
+
+function PitchHalf({ roster, flipped }) {
+  const rows = { gk: [], def: [], mid: [], fwd: [] };
+  roster.forEach((p) => rows[positionRow(p.position)].push(p));
+  const order = flipped ? ["fwd", "mid", "def", "gk"] : ["gk", "def", "mid", "fwd"];
+
+  const PlayerDot = ({ p }) => (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, width: 62 }}>
+      <div style={{ position: "relative" }}>
+        {p.photoUrl ? (
+          <img src={p.photoUrl} alt="" style={{ width: 40, height: 40, borderRadius: 999, objectFit: "cover", border: "2px solid white", boxShadow: "0 1px 3px rgba(0,0,0,0.4)" }} />
+        ) : (
+          <div style={{ width: 40, height: 40, borderRadius: 999, background: "white", border: "2px solid white", boxShadow: "0 1px 3px rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span className="f-mono" style={{ fontSize: 13, fontWeight: 700, color: C.pitch }}>{p.number || "-"}</span>
+          </div>
+        )}
+        {p.photoUrl && p.number && (
+          <span className="f-mono" style={{ position: "absolute", bottom: -3, right: -3, background: C.soil, color: "white", fontSize: 9, fontWeight: 700, borderRadius: 999, width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid white" }}>
+            {p.number}
+          </span>
+        )}
+      </div>
+      <span className="f-body" style={{ fontSize: 9.5, color: "white", textAlign: "center", lineHeight: 1.15, textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}>{p.name}</span>
+    </div>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1, justifyContent: flipped ? "flex-end" : "flex-start" }}>
+      {order.map((rowKey) => (
+        rows[rowKey].length > 0 && (
+          <div key={rowKey} style={{ display: "flex", justifyContent: "space-evenly", flexWrap: "wrap", gap: 6 }}>
+            {rows[rowKey].map((p) => <PlayerDot key={p.id} p={p} />)}
+          </div>
+        )
+      ))}
+    </div>
+  );
+}
+
+function PitchFormation({ lineupA, lineupB, labelA, labelB }) {
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, padding: "0 4px" }}>
+        <span className="f-mono" style={{ fontSize: 10, letterSpacing: 1, color: C.chalk, opacity: 0.7, fontWeight: 700 }}>{labelA.toUpperCase()}</span>
+        <span className="f-mono" style={{ fontSize: 10, letterSpacing: 1, color: C.chalk, opacity: 0.7, fontWeight: 700 }}>{labelB.toUpperCase()}</span>
+      </div>
+      <div
+        style={{
+          background: "#2E7D4F",
+          backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,0.05), rgba(255,255,255,0.05) 11%, transparent 11%, transparent 22%)",
+          borderRadius: 14, border: "2px solid rgba(255,255,255,0.35)", padding: "16px 10px",
+          display: "flex", flexDirection: "column", gap: 4, minHeight: 420, position: "relative",
+        }}
+      >
+        <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 1, background: "rgba(255,255,255,0.35)" }} />
+        <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 64, height: 64, borderRadius: 999, border: "1.5px solid rgba(255,255,255,0.35)" }} />
+        {lineupA.length === 0 && lineupB.length === 0 ? (
+          <div style={{ margin: "auto", textAlign: "center" }}>
+            <div className="f-body" style={{ color: "white", opacity: 0.75, fontSize: 12.5 }}>Lineups not announced yet.</div>
+          </div>
+        ) : (
+          <>
+            <PitchHalf roster={lineupA} flipped={false} />
+            <PitchHalf roster={lineupB} flipped={true} />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function computePlayerGoals(matches, teamId, playerName) {
   const key = playerName.trim().toLowerCase();
   let total = 0;
@@ -1195,26 +1275,7 @@ function MatchDetail({ match, teamName, players, votedMatches, onVote, onTeamTap
       </div>
 
       {section === "lineups" && (
-        <div style={{ background: C.chalk, borderRadius: 14, padding: 16, border: `1px solid ${C.line}`, display: "flex", gap: 16 }}>
-          <div style={{ flex: 1 }}>
-            <div className="f-mono" style={{ fontSize: 10, letterSpacing: 1, color: C.ochre, marginBottom: 8, fontWeight: 700 }}>{a.toUpperCase()}</div>
-            {lineupA.length === 0 && <div className="f-body" style={{ fontSize: 12, color: C.soil, opacity: 0.5 }}>Lineup not announced yet.</div>}
-            {lineupA.map((p) => (
-              <div key={p.id} className="f-body" style={{ fontSize: 12.5, color: C.soil, padding: "4px 0" }}>
-                {p.number ? `#${p.number} ` : ""}{p.name}{p.position ? <span style={{ opacity: 0.5 }}> · {p.position}</span> : null}
-              </div>
-            ))}
-          </div>
-          <div style={{ flex: 1 }}>
-            <div className="f-mono" style={{ fontSize: 10, letterSpacing: 1, color: C.ochre, marginBottom: 8, fontWeight: 700 }}>{b.toUpperCase()}</div>
-            {lineupB.length === 0 && <div className="f-body" style={{ fontSize: 12, color: C.soil, opacity: 0.5 }}>Lineup not announced yet.</div>}
-            {lineupB.map((p) => (
-              <div key={p.id} className="f-body" style={{ fontSize: 12.5, color: C.soil, padding: "4px 0" }}>
-                {p.number ? `#${p.number} ` : ""}{p.name}{p.position ? <span style={{ opacity: 0.5 }}> · {p.position}</span> : null}
-              </div>
-            ))}
-          </div>
-        </div>
+        <PitchFormation lineupA={lineupA} lineupB={lineupB} labelA={a} labelB={b} />
       )}
 
       {section === "events" && (
@@ -1720,7 +1781,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
               </div>
             </div>
           )}
-               <Field label="Badge / logo">
+          <Field label="Badge / logo">
             <input type="file" accept="image/*" onChange={handleBadgeSelect} style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px" }} />
             {badgeUploading && <div className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.6, marginTop: 4 }}>Uploading…</div>}
           </Field>
@@ -2475,7 +2536,8 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
     </div>
   );
 }
-      export default function AuyoFootballApp() {
+
+export default function AuyoFootballApp() {
   const [competitions, setCompetitionsState] = useState([]);
   const [teams, setTeamsState] = useState([]);
   const [matches, setMatchesState] = useState([]);
