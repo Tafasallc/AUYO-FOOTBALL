@@ -764,45 +764,90 @@ function positionRow(position) {
   return "mid";
 }
 
-function PitchHalf({ roster, flipped }) {
+// Lineup entries used to be stored as plain player-id strings. They're now
+// { id, row } objects so admin can put a player in a different line than
+// their usual position for one specific match (a defender playing midfield,
+// etc). This keeps old saved matches working either way.
+function normalizeLineupEntry(e) {
+  return typeof e === "string" ? { id: e, row: null } : e;
+}
+
+function PitchHalf({ roster, flipped, rowOverrides }) {
   const rows = { gk: [], def: [], mid: [], fwd: [] };
-  roster.forEach((p) => rows[positionRow(p.position)].push(p));
+  roster.forEach((p) => rows[(rowOverrides && rowOverrides[p.id]) || positionRow(p.position)].push(p));
   const order = flipped ? ["fwd", "mid", "def", "gk"] : ["gk", "def", "mid", "fwd"];
+  const activeRows = order.filter((k) => rows[k].length > 0);
 
   const PlayerDot = ({ p }) => (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, width: 62 }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, width: 60 }}>
       <div style={{ position: "relative" }}>
         {p.photoUrl ? (
-          <img src={p.photoUrl} alt="" style={{ width: 40, height: 40, borderRadius: 999, objectFit: "cover", border: "2px solid white", boxShadow: "0 1px 3px rgba(0,0,0,0.4)" }} />
+          <img src={p.photoUrl} alt="" style={{ width: 38, height: 38, borderRadius: 999, objectFit: "cover", border: "2px solid white", boxShadow: "0 1px 3px rgba(0,0,0,0.4)" }} />
         ) : (
-          <div style={{ width: 40, height: 40, borderRadius: 999, background: "white", border: "2px solid white", boxShadow: "0 1px 3px rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span className="f-mono" style={{ fontSize: 13, fontWeight: 700, color: C.pitch }}>{p.number || "-"}</span>
+          <div style={{ width: 38, height: 38, borderRadius: 999, background: "white", border: "2px solid white", boxShadow: "0 1px 3px rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span className="f-mono" style={{ fontSize: 12.5, fontWeight: 700, color: C.pitch }}>{p.number || "-"}</span>
           </div>
         )}
         {p.photoUrl && p.number && (
-          <span className="f-mono" style={{ position: "absolute", bottom: -3, right: -3, background: C.soil, color: "white", fontSize: 9, fontWeight: 700, borderRadius: 999, width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid white" }}>
+          <span className="f-mono" style={{ position: "absolute", bottom: -3, right: -3, background: C.soil, color: "white", fontSize: 8.5, fontWeight: 700, borderRadius: 999, width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid white" }}>
             {p.number}
           </span>
         )}
       </div>
-      <span className="f-body" style={{ fontSize: 9.5, color: "white", textAlign: "center", lineHeight: 1.15, textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}>{p.name}</span>
+      <span className="f-body" style={{ fontSize: 9, color: "white", textAlign: "center", lineHeight: 1.15, textShadow: "0 1px 2px rgba(0,0,0,0.7)" }}>{p.name}</span>
     </div>
   );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1, justifyContent: flipped ? "flex-end" : "flex-start" }}>
-      {order.map((rowKey) => (
-        rows[rowKey].length > 0 && (
-          <div key={rowKey} style={{ display: "flex", justifyContent: "space-evenly", flexWrap: "wrap", gap: 6 }}>
-            {rows[rowKey].map((p) => <PlayerDot key={p.id} p={p} />)}
-          </div>
-        )
+    // space-between (rather than bunching at one edge) spreads however many
+    // rows exist evenly from the goal line to the halfway line, so a 1-row
+    // attack and a 4-row defense both look properly positioned regardless
+    // of the formation shape.
+    <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1, padding: "10px 0" }}>
+      {activeRows.map((rowKey) => (
+        <div key={rowKey} style={{ display: "flex", justifyContent: "space-evenly", flexWrap: "wrap", gap: 6 }}>
+          {rows[rowKey].map((p) => <PlayerDot key={p.id} p={p} />)}
+        </div>
       ))}
     </div>
   );
 }
 
-function PitchFormation({ lineupA, lineupB, labelA, labelB }) {
+function PitchMarkings() {
+  const line = "rgba(255,255,255,0.45)";
+  return (
+    <>
+      {/* Outer boundary */}
+      <div style={{ position: "absolute", inset: 6, border: `1.5px solid ${line}`, borderRadius: 4 }} />
+      {/* Halfway line */}
+      <div style={{ position: "absolute", left: 6, right: 6, top: "50%", height: 1.5, background: line }} />
+      {/* Center circle + spot */}
+      <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 74, height: 74, borderRadius: 999, border: `1.5px solid ${line}` }} />
+      <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 5, height: 5, borderRadius: 999, background: line }} />
+      {/* Top penalty box + six-yard box (Team A's goal) */}
+      <div style={{ position: "absolute", left: "20%", right: "20%", top: 6, height: 70, border: `1.5px solid ${line}`, borderTop: "none" }} />
+      <div style={{ position: "absolute", left: "36%", right: "36%", top: 6, height: 30, border: `1.5px solid ${line}`, borderTop: "none" }} />
+      {/* Bottom penalty box + six-yard box (Team B's goal) */}
+      <div style={{ position: "absolute", left: "20%", right: "20%", bottom: 6, height: 70, border: `1.5px solid ${line}`, borderBottom: "none" }} />
+      <div style={{ position: "absolute", left: "36%", right: "36%", bottom: 6, height: 30, border: `1.5px solid ${line}`, borderBottom: "none" }} />
+      {/* Corner arcs */}
+      {[["6px", "6px", "0 0"], ["auto", "6px", "0 0"], ["6px", "auto", "0 0"], ["auto", "auto", "0 0"]].map((_, i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute", width: 14, height: 14, border: `1.5px solid ${line}`, borderRadius: "50%",
+            top: i < 2 ? 0 : "auto", bottom: i >= 2 ? 0 : "auto",
+            left: i % 2 === 0 ? 0 : "auto", right: i % 2 === 1 ? 0 : "auto",
+            clipPath: i === 0 ? "circle(100% at 0 0)" : i === 1 ? "circle(100% at 100% 0)" : i === 2 ? "circle(100% at 0 100%)" : "circle(100% at 100% 100%)",
+            margin: 6,
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
+function PitchFormation({ lineupA, lineupB, labelA, labelB, rowOverridesA, rowOverridesB }) {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, padding: "0 4px" }}>
@@ -813,21 +858,20 @@ function PitchFormation({ lineupA, lineupB, labelA, labelB }) {
         style={{
           background: "#2E7D4F",
           backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,0.05), rgba(255,255,255,0.05) 11%, transparent 11%, transparent 22%)",
-          borderRadius: 14, border: "2px solid rgba(255,255,255,0.35)", padding: "16px 10px",
-          display: "flex", flexDirection: "column", gap: 4, minHeight: 420, position: "relative",
+          borderRadius: 10, padding: "12px 8px",
+          display: "flex", flexDirection: "column", minHeight: 460, position: "relative", overflow: "hidden",
         }}
       >
-        <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 1, background: "rgba(255,255,255,0.35)" }} />
-        <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 64, height: 64, borderRadius: 999, border: "1.5px solid rgba(255,255,255,0.35)" }} />
+        <PitchMarkings />
         {lineupA.length === 0 && lineupB.length === 0 ? (
-          <div style={{ margin: "auto", textAlign: "center" }}>
+          <div style={{ margin: "auto", textAlign: "center", position: "relative", zIndex: 1 }}>
             <div className="f-body" style={{ color: "white", opacity: 0.75, fontSize: 12.5 }}>Lineups not announced yet.</div>
           </div>
         ) : (
-          <>
-            <PitchHalf roster={lineupA} flipped={false} />
-            <PitchHalf roster={lineupB} flipped={true} />
-          </>
+          <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", flex: 1 }}>
+            <PitchHalf roster={lineupA} flipped={false} rowOverrides={rowOverridesA} />
+            <PitchHalf roster={lineupB} flipped={true} rowOverrides={rowOverridesB} />
+          </div>
         )}
       </div>
     </div>
@@ -1204,10 +1248,12 @@ function MatchDetail({ match, teamName, players, votedMatches, onVote, onTeamTap
   const b = match.teamBName || teamName(match.teamBId);
   const teamARoster = players.filter((p) => playerTeamIds(p).includes(match.teamAId));
   const teamBRoster = players.filter((p) => playerTeamIds(p).includes(match.teamBId));
-  const lineupAIds = (match.lineups && match.lineups.teamA) || [];
-  const lineupBIds = (match.lineups && match.lineups.teamB) || [];
-  const lineupA = teamARoster.filter((p) => lineupAIds.includes(p.id));
-  const lineupB = teamBRoster.filter((p) => lineupBIds.includes(p.id));
+  const lineupAEntries = ((match.lineups && match.lineups.teamA) || []).map(normalizeLineupEntry);
+  const lineupBEntries = ((match.lineups && match.lineups.teamB) || []).map(normalizeLineupEntry);
+  const lineupA = teamARoster.filter((p) => lineupAEntries.some((e) => e.id === p.id));
+  const lineupB = teamBRoster.filter((p) => lineupBEntries.some((e) => e.id === p.id));
+  const rowOverridesA = Object.fromEntries(lineupAEntries.filter((e) => e.row).map((e) => [e.id, e.row]));
+  const rowOverridesB = Object.fromEntries(lineupBEntries.filter((e) => e.row).map((e) => [e.id, e.row]));
 
   const scorers = match.scorers || [];
   const cards = match.cards || [];
@@ -1275,7 +1321,7 @@ function MatchDetail({ match, teamName, players, votedMatches, onVote, onTeamTap
       </div>
 
       {section === "lineups" && (
-        <PitchFormation lineupA={lineupA} lineupB={lineupB} labelA={a} labelB={b} />
+        <PitchFormation lineupA={lineupA} lineupB={lineupB} labelA={a} labelB={b} rowOverridesA={rowOverridesA} rowOverridesB={rowOverridesB} />
       )}
 
       {section === "events" && (
@@ -1346,7 +1392,7 @@ function MatchDetail({ match, teamName, players, votedMatches, onVote, onTeamTap
 }
 
 function CompetitionProfile({ competition, teams, matches, teamName, teamGroup, votedMatches, onVote, onTeamTap, onOpenMatch, onClose }) {
-  const [section, setSection] = useState("table");
+  const [section, setSection] = useState("matches");
   if (!competition) return null;
 
   const groups = [
@@ -1369,7 +1415,7 @@ function CompetitionProfile({ competition, teams, matches, teamName, teamGroup, 
       </div>
 
       <div style={{ display: "flex", gap: 6, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
-        {[{ key: "table", label: "Table" }, { key: "scorers", label: "Scorers" }, { key: "matches", label: "Matches" }, { key: "knockout", label: "Knockout" }].map((s) => (
+        {[{ key: "matches", label: "Matches" }, { key: "table", label: "Table" }, { key: "knockout", label: "Knockout" }, { key: "scorers", label: "Scorers" }].map((s) => (
           <button
             key={s.key}
             onClick={() => setSection(s.key)}
@@ -1563,35 +1609,61 @@ function CardsRow({ match, updateMatch }) {
 function LineupRow({ match, updateMatch, players }) {
   const teamARoster = players.filter((p) => playerTeamIds(p).includes(match.teamAId));
   const teamBRoster = players.filter((p) => playerTeamIds(p).includes(match.teamBId));
-  const lineupA = (match.lineups && match.lineups.teamA) || [];
-  const lineupB = (match.lineups && match.lineups.teamB) || [];
+  const entriesA = ((match.lineups && match.lineups.teamA) || []).map(normalizeLineupEntry);
+  const entriesB = ((match.lineups && match.lineups.teamB) || []).map(normalizeLineupEntry);
 
-  const toggle = (side, playerId) => {
+  const toggle = (side, player) => {
     const key = side === "A" ? "teamA" : "teamB";
-    const current = (match.lineups && match.lineups[key]) || [];
-    const next = current.includes(playerId) ? current.filter((id) => id !== playerId) : [...current, playerId];
+    const current = ((match.lineups && match.lineups[key]) || []).map(normalizeLineupEntry);
+    const exists = current.some((e) => e.id === player.id);
+    const next = exists
+      ? current.filter((e) => e.id !== player.id)
+      : [...current, { id: player.id, row: positionRow(player.position) }];
     updateMatch(match.id, { lineups: { ...(match.lineups || {}), [key]: next } });
   };
 
-  const Side = ({ label, roster, lineup, side }) => (
+  const setRow = (side, playerId, row) => {
+    const key = side === "A" ? "teamA" : "teamB";
+    const current = ((match.lineups && match.lineups[key]) || []).map(normalizeLineupEntry);
+    updateMatch(match.id, { lineups: { ...(match.lineups || {}), [key]: current.map((e) => (e.id === playerId ? { ...e, row } : e)) } });
+  };
+
+  const Side = ({ label, roster, entries, side }) => (
     <div style={{ flex: 1 }}>
       <div className="f-mono" style={{ fontSize: 9.5, opacity: 0.5, color: C.soil, marginBottom: 4 }}>{label}</div>
       {roster.length === 0 && <div className="f-body" style={{ fontSize: 11, color: C.soil, opacity: 0.5 }}>No roster on file.</div>}
-      {roster.map((p) => (
-        <label key={p.id} className="f-body" style={{ fontSize: 12, color: C.soil, display: "flex", alignItems: "center", gap: 5, padding: "2px 0" }}>
-          <input type="checkbox" checked={lineup.includes(p.id)} onChange={() => toggle(side, p.id)} />
-          {p.name}{p.number ? ` #${p.number}` : ""}
-        </label>
-      ))}
+      {roster.map((p) => {
+        const entry = entries.find((e) => e.id === p.id);
+        return (
+          <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 5, padding: "2px 0" }}>
+            <label className="f-body" style={{ fontSize: 12, color: C.soil, display: "flex", alignItems: "center", gap: 5, flex: 1, minWidth: 0 }}>
+              <input type="checkbox" checked={!!entry} onChange={() => toggle(side, p)} />
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}{p.number ? ` #${p.number}` : ""}</span>
+            </label>
+            {entry && (
+              <select
+                value={entry.row || positionRow(p.position)}
+                onChange={(e) => setRow(side, p.id, e.target.value)}
+                style={{ fontSize: 10, padding: "2px 3px", borderRadius: 6, border: `1px solid ${C.line}`, flexShrink: 0 }}
+              >
+                <option value="gk">GK</option>
+                <option value="def">DEF</option>
+                <option value="mid">MID</option>
+                <option value="fwd">FWD</option>
+              </select>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 
   return (
     <div style={{ marginTop: 8, borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
-      <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginBottom: 6 }}>LINEUPS — tick who's playing</div>
+      <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginBottom: 6 }}>LINEUPS — tick who's playing. Use the line dropdown if someone's playing out of their usual position for this match.</div>
       <div style={{ display: "flex", gap: 10 }}>
-        <Side label="HOME" roster={teamARoster} lineup={lineupA} side="A" />
-        <Side label="AWAY" roster={teamBRoster} lineup={lineupB} side="B" />
+        <Side label="HOME" roster={teamARoster} entries={entriesA} side="A" />
+        <Side label="AWAY" roster={teamBRoster} entries={entriesB} side="B" />
       </div>
     </div>
   );
@@ -2578,22 +2650,35 @@ export default function AuyoFootballApp() {
   useEffect(() => {
     (async () => {
       try {
-        let comps = await loadKey("auyo-competitions");
+        // Fetch everything at once instead of one-at-a-time — with 8 separate
+        // documents, doing this sequentially meant every visitor waited for
+        // 8 full network round-trips in a row before seeing anything.
+        const [comps0, t0, m0, n0, sp0, ad0, pl0, tr0] = await Promise.all([
+          loadKey("auyo-competitions"),
+          loadKey("auyo-teams"),
+          loadKey("auyo-matches"),
+          loadKey("auyo-news"),
+          loadKey("auyo-sponsors"),
+          loadKey("auyo-ads"),
+          loadKey("auyo-players"),
+          loadKey("auyo-transfers"),
+        ]);
+
+        let comps = comps0;
+        let t = t0;
+        let m = m0;
+        let n = n0;
+        const sp = sp0 || [];
+        const ad = ad0 || [];
+        const pl = pl0 || [];
+        const tr = tr0 || [];
+
+        // Seeding only ever matters the very first time the database is empty.
         if (!comps) { comps = seedCompetitions(); await saveKey("auyo-competitions", comps); }
-        let t = await loadKey("auyo-teams");
         if (!t) { t = seedTeams(comps[0].id); await saveKey("auyo-teams", t); }
-        let m = await loadKey("auyo-matches");
         if (!m) { m = seedMatches(comps[0].id, t); await saveKey("auyo-matches", m); }
-        let n = await loadKey("auyo-news");
         if (!n) { n = seedNews(); await saveKey("auyo-news", n); }
-        let sp = await loadKey("auyo-sponsors");
-        if (!sp) sp = [];
-        let ad = await loadKey("auyo-ads");
-        if (!ad) ad = [];
-        let pl = await loadKey("auyo-players");
-        if (!pl) pl = [];
-        let tr = await loadKey("auyo-transfers");
-        if (!tr) tr = [];
+
         setCompetitionsState(comps); setTeamsState(t); setMatchesState(m); setNewsState(n); setSponsorsState(sp); setAdsState(ad); setPlayersState(pl); setTransfersState(tr);
         setActiveCompetitionId(comps[0]?.id || "");
         setLoading(false);
