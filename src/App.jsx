@@ -322,7 +322,6 @@ function LegalTab({ onClose }) {
   );
 }
 
-
 function StatusPill({ status }) {
   if (status === "live")
     return (
@@ -1191,7 +1190,6 @@ function TeamProfile({ team, players, matches, onClose }) {
   );
 }
 
-
 function TeamsTab({ competition, teams, players, matches, selectedTeamId, setSelectedTeamId, onClose }) {
   const selectedTeam = teams.find((t) => t.id === selectedTeamId);
 
@@ -1419,7 +1417,6 @@ function SearchTab({ teams, players, competitions, matches, referees, teamName, 
     </div>
   );
 }
-
 
 function RankingList({ title, rows, columnLabel, valueKey, emptyText }) {
   const [expanded, setExpanded] = useState(false);
@@ -2343,7 +2340,6 @@ function MotmRow({ match, updateMatch }) {
     </div>
   );
 }
-
 
 function NewsModerationRow({ post, news, setNews, removeNews }) {
   const [expanded, setExpanded] = useState(false);
