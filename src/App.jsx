@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Radio, Newspaper, Table2, Lock, Plus, Trash2, Clock, MapPin, ChevronRight, Unlock, Target, ChevronDown, Share2, Info, Users, ArrowLeft, Search, ArrowLeftRight } from "lucide-react";
 import { storage, uploadImage } from "./storage";
 
@@ -19,6 +19,31 @@ const FONTS = `
 `;
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+// Lets any pill/tab row respond to a left/right swipe on its content area,
+// moving to the next or previous entry in `order`. A swipe only counts if
+// it's clearly more horizontal than vertical and past a minimum distance,
+// so normal vertical scrolling isn't mistaken for a tab change.
+function useSwipeTabs(order, current, onChange) {
+  const start = useRef(null);
+  const onTouchStart = (e) => {
+    const t = e.touches[0];
+    start.current = { x: t.clientX, y: t.clientY };
+  };
+  const onTouchEnd = (e) => {
+    if (!start.current) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.current.x;
+    const dy = t.clientY - start.current.y;
+    start.current = null;
+    if (Math.abs(dx) < 55 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
+    const idx = order.indexOf(current);
+    if (idx === -1) return;
+    if (dx < 0 && idx < order.length - 1) onChange(order[idx + 1]);
+    else if (dx > 0 && idx > 0) onChange(order[idx - 1]);
+  };
+  return { onTouchStart, onTouchEnd };
+}
 
 // A player can belong to more than one team (club, academy, quarters/Unguwa
 // team, etc). New records use teamIds (array); this stays compatible with
@@ -692,6 +717,52 @@ function computeTopScorers(matches, teamName) {
     .sort((a, b) => b.goals - a.goals);
 }
 
+function computeTopAssists(matches, teamName) {
+  const rows = {};
+  matches.forEach((m) => {
+    (m.assists || []).forEach((s) => {
+      const key = s.name.trim().toLowerCase() + "|" + s.teamId;
+      if (!rows[key]) rows[key] = { name: s.name, teamId: s.teamId, assists: 0 };
+      rows[key].assists += Number(s.assists) || 0;
+    });
+  });
+  return Object.values(rows)
+    .map((r) => ({ ...r, teamLabel: teamName(r.teamId) }))
+    .filter((r) => r.assists > 0)
+    .sort((a, b) => b.assists - a.assists);
+}
+
+// "Best goalkeeper" is derived from data already on hand rather than a
+// separate stat to enter by hand: a goalkeeper is whoever's lineup row was
+// set to "gk" for that match, and they're credited a clean sheet whenever
+// their team didn't concede in a finished match.
+function computeBestGoalkeepers(matches, players, teamName) {
+  const rows = {};
+  matches.filter((m) => m.status === "finished").forEach((m) => {
+    const entriesA = ((m.lineups && m.lineups.teamA) || []).map(normalizeLineupEntry);
+    const entriesB = ((m.lineups && m.lineups.teamB) || []).map(normalizeLineupEntry);
+    const gkA = entriesA.find((e) => e.row === "gk");
+    const gkB = entriesB.find((e) => e.row === "gk");
+    const gkAName = gkA && players.find((p) => p.id === gkA.id)?.name;
+    const gkBName = gkB && players.find((p) => p.id === gkB.id)?.name;
+    if (gkAName) {
+      const key = gkAName.trim().toLowerCase() + "|" + m.teamAId;
+      if (!rows[key]) rows[key] = { name: gkAName, teamId: m.teamAId, cleanSheets: 0, played: 0 };
+      rows[key].played += 1;
+      if (Number(m.scoreB) === 0) rows[key].cleanSheets += 1;
+    }
+    if (gkBName) {
+      const key = gkBName.trim().toLowerCase() + "|" + m.teamBId;
+      if (!rows[key]) rows[key] = { name: gkBName, teamId: m.teamBId, cleanSheets: 0, played: 0 };
+      rows[key].played += 1;
+      if (Number(m.scoreA) === 0) rows[key].cleanSheets += 1;
+    }
+  });
+  return Object.values(rows)
+    .map((r) => ({ ...r, teamLabel: teamName(r.teamId) }))
+    .sort((a, b) => b.cleanSheets - a.cleanSheets);
+}
+
 function PlayerProfile({ player, team, goals, onClose }) {
   return (
     <div style={{ paddingBottom: 90 }}>
@@ -754,6 +825,45 @@ function PlayerProfile({ player, team, goals, onClose }) {
   );
 }
 
+function RefereeProfile({ referee, matches, teamName, onClose }) {
+  if (!referee) return null;
+  const officiated = matches
+    .filter((m) => m.refereeId === referee.id && m.status === "finished")
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+
+  return (
+    <div style={{ paddingBottom: 90 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+        <button onClick={onClose} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 999, padding: "6px 12px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer" }}>
+          <span className="f-body" style={{ fontSize: 12, fontWeight: 700, color: C.chalk }}>✕ Close</span>
+        </button>
+      </div>
+      <div style={{ background: C.chalk, borderRadius: 16, padding: 24, textAlign: "center", border: `1px solid ${C.line}`, marginBottom: 14 }}>
+        {referee.photoUrl ? (
+          <img src={referee.photoUrl} alt="" style={{ width: 110, height: 110, borderRadius: 999, objectFit: "cover", border: `3px solid ${C.ochre}`, marginBottom: 14 }} />
+        ) : (
+          <div style={{ width: 110, height: 110, borderRadius: 999, background: C.sand || "#F2E9D8", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+            <span className="f-display" style={{ fontSize: 36, color: C.pitch }}>{referee.name?.[0] || "?"}</span>
+          </div>
+        )}
+        <div className="f-display" style={{ fontSize: 22, color: C.pitch, marginBottom: 4 }}>{referee.name}</div>
+        <div className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.5, letterSpacing: 0.5 }}>MATCH OFFICIAL</div>
+      </div>
+      {officiated.length > 0 && (
+        <div style={{ background: C.chalk, borderRadius: 14, padding: 14, border: `1px solid ${C.line}` }}>
+          <div className="f-mono" style={{ fontSize: 10, letterSpacing: 1.5, color: C.ochre, marginBottom: 10, fontWeight: 700 }}>MATCHES OFFICIATED</div>
+          {officiated.map((m) => (
+            <div key={m.id} className="f-body" style={{ fontSize: 12.5, color: C.soil, padding: "6px 0", borderBottom: `1px solid ${C.line}` }}>
+              {teamName(m.teamAId)} {m.scoreA}–{m.scoreB} {teamName(m.teamBId)}
+              <span className="f-mono" style={{ fontSize: 10, opacity: 0.5, marginLeft: 8 }}>{m.date}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Buckets a player's free-text position (e.g. "CB", "Striker", "CDM") into
 // one of four pitch rows, since we don't collect exact x/y coordinates.
 function positionRow(position) {
@@ -772,14 +882,14 @@ function normalizeLineupEntry(e) {
   return typeof e === "string" ? { id: e, row: null } : e;
 }
 
-function PitchHalf({ roster, flipped, rowOverrides }) {
-  const rows = { gk: [], def: [], mid: [], fwd: [] };
-  roster.forEach((p) => rows[(rowOverrides && rowOverrides[p.id]) || positionRow(p.position)].push(p));
-  const order = flipped ? ["fwd", "mid", "def", "gk"] : ["gk", "def", "mid", "fwd"];
-  const activeRows = order.filter((k) => rows[k].length > 0);
+function PitchHalf({ roster, flipped, rowOverrides, onPlayerTap }) {
+  const hasCoords = roster.some((p) => p._x != null && p._y != null);
 
   const PlayerDot = ({ p }) => (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, width: 60 }}>
+    <div
+      onClick={() => onPlayerTap && onPlayerTap(p.id)}
+      style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, width: 60, cursor: onPlayerTap ? "pointer" : "default" }}
+    >
       <div style={{ position: "relative" }}>
         {p.photoUrl ? (
           <img src={p.photoUrl} alt="" style={{ width: 38, height: 38, borderRadius: 999, objectFit: "cover", border: "2px solid white", boxShadow: "0 1px 3px rgba(0,0,0,0.4)" }} />
@@ -797,6 +907,25 @@ function PitchHalf({ roster, flipped, rowOverrides }) {
       <span className="f-body" style={{ fontSize: 9, color: "white", textAlign: "center", lineHeight: 1.15, textShadow: "0 1px 2px rgba(0,0,0,0.7)" }}>{p.name}</span>
     </div>
   );
+
+  if (hasCoords) {
+    // Players placed by dragging in Admin — position exactly where they
+    // were dropped. x/y are 0-100 percentages within this team's own half.
+    return (
+      <div style={{ position: "relative", flex: 1 }}>
+        {roster.map((p) => (
+          <div key={p.id} style={{ position: "absolute", left: `${p._x ?? 50}%`, top: `${flipped ? 100 - (p._y ?? 50) : (p._y ?? 50)}%`, transform: "translate(-50%, -50%)" }}>
+            <PlayerDot p={p} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const rows = { gk: [], def: [], mid: [], fwd: [] };
+  roster.forEach((p) => rows[(rowOverrides && rowOverrides[p.id]) || positionRow(p.position)].push(p));
+  const order = flipped ? ["fwd", "mid", "def", "gk"] : ["gk", "def", "mid", "fwd"];
+  const activeRows = order.filter((k) => rows[k].length > 0);
 
   return (
     // space-between (rather than bunching at one edge) spreads however many
@@ -847,13 +976,24 @@ function PitchMarkings() {
   );
 }
 
-function PitchFormation({ lineupA, lineupB, labelA, labelB, rowOverridesA, rowOverridesB }) {
+function SubPlayerChip({ p, onTap }) {
+  return (
+    <div onClick={() => onTap && onTap(p.id)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 0", cursor: onTap ? "pointer" : "default" }}>
+      {p.photoUrl ? (
+        <img src={p.photoUrl} alt="" style={{ width: 24, height: 24, borderRadius: 999, objectFit: "cover", flexShrink: 0 }} />
+      ) : (
+        <div style={{ width: 24, height: 24, borderRadius: 999, background: C.line, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <span className="f-mono" style={{ fontSize: 9, fontWeight: 700, color: C.pitch }}>{p.number || "-"}</span>
+        </div>
+      )}
+      <span className="f-body" style={{ fontSize: 12, color: C.soil }}>{p.name}</span>
+    </div>
+  );
+}
+
+function PitchFormation({ lineupA, lineupB, labelA, labelB, rowOverridesA, rowOverridesB, subsA, subsB, referee, assistant1Name, assistant2Name, onPlayerTap, onRefereeTap }) {
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, padding: "0 4px" }}>
-        <span className="f-mono" style={{ fontSize: 10, letterSpacing: 1, color: C.chalk, opacity: 0.7, fontWeight: 700 }}>{labelA.toUpperCase()}</span>
-        <span className="f-mono" style={{ fontSize: 10, letterSpacing: 1, color: C.chalk, opacity: 0.7, fontWeight: 700 }}>{labelB.toUpperCase()}</span>
-      </div>
       <div
         style={{
           background: "#2E7D4F",
@@ -863,17 +1003,58 @@ function PitchFormation({ lineupA, lineupB, labelA, labelB, rowOverridesA, rowOv
         }}
       >
         <PitchMarkings />
+        <span className="f-mono" style={{ position: "absolute", top: 8, left: 10, fontSize: 10, letterSpacing: 0.5, color: "white", opacity: 0.85, fontWeight: 700, textShadow: "0 1px 2px rgba(0,0,0,0.5)", zIndex: 2 }}>{labelA.toUpperCase()}</span>
+        <span className="f-mono" style={{ position: "absolute", bottom: 8, right: 10, fontSize: 10, letterSpacing: 0.5, color: "white", opacity: 0.85, fontWeight: 700, textShadow: "0 1px 2px rgba(0,0,0,0.5)", zIndex: 2 }}>{labelB.toUpperCase()}</span>
         {lineupA.length === 0 && lineupB.length === 0 ? (
           <div style={{ margin: "auto", textAlign: "center", position: "relative", zIndex: 1 }}>
             <div className="f-body" style={{ color: "white", opacity: 0.75, fontSize: 12.5 }}>Lineups not announced yet.</div>
           </div>
         ) : (
           <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", flex: 1 }}>
-            <PitchHalf roster={lineupA} flipped={false} rowOverrides={rowOverridesA} />
-            <PitchHalf roster={lineupB} flipped={true} rowOverrides={rowOverridesB} />
+            <PitchHalf roster={lineupA} flipped={false} rowOverrides={rowOverridesA} onPlayerTap={onPlayerTap} />
+            <PitchHalf roster={lineupB} flipped={true} rowOverrides={rowOverridesB} onPlayerTap={onPlayerTap} />
           </div>
         )}
       </div>
+
+      {(subsA?.length > 0 || subsB?.length > 0) && (
+        <div style={{ display: "flex", gap: 14, marginTop: 14 }}>
+          <div style={{ flex: 1 }}>
+            <div className="f-mono" style={{ fontSize: 9.5, letterSpacing: 1, color: C.chalk, opacity: 0.6, marginBottom: 6, fontWeight: 700 }}>SUBSTITUTES</div>
+            {(subsA || []).map((p) => <SubPlayerChip key={p.id} p={p} onTap={onPlayerTap} />)}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div className="f-mono" style={{ fontSize: 9.5, letterSpacing: 1, color: C.chalk, opacity: 0.6, marginBottom: 6, fontWeight: 700, textAlign: "right" }}>SUBSTITUTES</div>
+            {(subsB || []).map((p) => <SubPlayerChip key={p.id} p={p} onTap={onPlayerTap} />)}
+          </div>
+        </div>
+      )}
+
+      {(referee?.name || assistant1Name || assistant2Name) && (
+        <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.06)", borderRadius: 10, padding: 10 }}>
+          {referee?.name && (
+            <div onClick={() => onRefereeTap && onRefereeTap()} style={{ display: "flex", alignItems: "center", gap: 8, cursor: onRefereeTap ? "pointer" : "default" }}>
+              {referee.photoUrl ? (
+                <img src={referee.photoUrl} alt="" style={{ width: 32, height: 32, borderRadius: 999, objectFit: "cover" }} />
+              ) : (
+                <div style={{ width: 32, height: 32, borderRadius: 999, background: C.line, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span className="f-display" style={{ fontSize: 12, color: C.pitch }}>{referee.name[0]}</span>
+                </div>
+              )}
+              <div>
+                <div className="f-mono" style={{ fontSize: 8.5, color: C.chalk, opacity: 0.5 }}>REFEREE</div>
+                <div className="f-body" style={{ fontSize: 12, color: C.chalk, fontWeight: 600 }}>{referee.name}</div>
+              </div>
+            </div>
+          )}
+          {(assistant1Name || assistant2Name) && (
+            <div style={{ flex: 1 }}>
+              <div className="f-mono" style={{ fontSize: 8.5, color: C.chalk, opacity: 0.5 }}>ASSISTANTS</div>
+              <div className="f-body" style={{ fontSize: 12, color: C.chalk, opacity: 0.85 }}>{[assistant1Name, assistant2Name].filter(Boolean).join(" · ")}</div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1098,7 +1279,7 @@ function TransfersTab({ transfers, teamName, onTeamTap }) {
   );
 }
 
-function SearchTab({ teams, players, competitions, matches, teamName, onOpenTeam, onOpenPlayer, onOpenCompetition, onOpenMatches, onClose }) {
+function SearchTab({ teams, players, competitions, matches, referees, teamName, onOpenTeam, onOpenPlayer, onOpenCompetition, onOpenMatches, onOpenReferee, onClose }) {
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
 
@@ -1106,8 +1287,9 @@ function SearchTab({ teams, players, competitions, matches, teamName, onOpenTeam
   const playerResults = q ? players.filter((p) => p.name.toLowerCase().includes(q)) : [];
   const competitionResults = q ? competitions.filter((c) => c.name.toLowerCase().includes(q)) : [];
   const matchResults = q ? matches.filter((m) => teamName(m.teamAId).toLowerCase().includes(q) || teamName(m.teamBId).toLowerCase().includes(q)) : [];
+  const refereeResults = q ? (referees || []).filter((r) => r.name.toLowerCase().includes(q)) : [];
 
-  const hasResults = teamResults.length || playerResults.length || competitionResults.length || matchResults.length;
+  const hasResults = teamResults.length || playerResults.length || competitionResults.length || matchResults.length || refereeResults.length;
 
   const ResultRow = ({ onClick, children }) => (
     <div onClick={onClick} style={{ padding: "10px 12px", borderBottom: `1px solid ${C.line}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -1198,7 +1380,7 @@ function SearchTab({ teams, players, competitions, matches, teamName, onOpenTeam
       )}
 
       {matchResults.length > 0 && (
-        <div>
+        <div style={{ marginBottom: refereeResults.length > 0 ? 16 : 0 }}>
           <div className="f-mono" style={{ fontSize: 10, letterSpacing: 1.5, color: C.ochre, marginBottom: 6, fontWeight: 700 }}>MATCHES</div>
           <div style={{ background: C.chalk, borderRadius: 12, overflow: "hidden" }}>
             {matchResults.map((m) => (
@@ -1212,35 +1394,83 @@ function SearchTab({ teams, players, competitions, matches, teamName, onOpenTeam
           </div>
         </div>
       )}
+
+      {refereeResults.length > 0 && (
+        <div>
+          <div className="f-mono" style={{ fontSize: 10, letterSpacing: 1.5, color: C.ochre, marginBottom: 6, fontWeight: 700 }}>REFEREES</div>
+          <div style={{ background: C.chalk, borderRadius: 12, overflow: "hidden" }}>
+            {refereeResults.map((r) => (
+              <ResultRow key={r.id} onClick={() => onOpenReferee(r.id)}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {r.photoUrl ? (
+                    <img src={r.photoUrl} alt="" style={{ width: 28, height: 28, borderRadius: 999, objectFit: "cover" }} />
+                  ) : (
+                    <div style={{ width: 28, height: 28, borderRadius: 999, background: C.sand || "#F2E9D8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span className="f-mono" style={{ fontSize: 11, color: C.pitch }}>{r.name?.[0] || "?"}</span>
+                    </div>
+                  )}
+                  <span className="f-body" style={{ fontSize: 13.5, fontWeight: 600, color: C.soil }}>{r.name}</span>
+                </div>
+              </ResultRow>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 
-function ScorersTab({ matches, teamName }) {
-  const scorers = computeTopScorers(matches, teamName);
+function RankingList({ title, rows, columnLabel, valueKey, emptyText }) {
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? rows : rows.slice(0, 5);
   return (
-    <div style={{ paddingBottom: 90 }}>
+    <div style={{ marginBottom: 20 }}>
+      <div
+        onClick={() => rows.length > 5 && setExpanded(!expanded)}
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, cursor: rows.length > 5 ? "pointer" : "default" }}
+      >
+        <span className="f-mono" style={{ fontSize: 11, letterSpacing: 2, color: C.ochre, fontWeight: 700 }}>{title.toUpperCase()}</span>
+        {rows.length > 5 && (
+          <span className="f-mono" style={{ fontSize: 10.5, color: C.chalk, opacity: 0.6, display: "flex", alignItems: "center", gap: 3 }}>
+            {expanded ? "Show top 5" : `Show all ${rows.length}`}
+            <ChevronRight size={12} style={{ transform: expanded ? "rotate(-90deg)" : "rotate(90deg)" }} />
+          </span>
+        )}
+      </div>
       <div style={{ background: C.chalk, borderRadius: 14, border: `1px solid ${C.line}`, overflow: "hidden" }}>
-        <div className="f-mono" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 40px", fontSize: 10, color: C.soil, opacity: 0.5, padding: "10px 12px", letterSpacing: 0.5, borderBottom: `1px solid ${C.line}` }}>
-          <div>PLAYER</div><div>TEAM</div><div style={{ textAlign: "center" }}>GLS</div>
+        <div className="f-mono" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 44px", fontSize: 10, color: C.soil, opacity: 0.5, padding: "10px 12px", letterSpacing: 0.5, borderBottom: `1px solid ${C.line}` }}>
+          <div>PLAYER</div><div>TEAM</div><div style={{ textAlign: "center" }}>{columnLabel}</div>
         </div>
-        {scorers.map((r, i) => (
-          <div key={r.name + r.teamId} className="f-body" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 40px", fontSize: 13, padding: "11px 12px", alignItems: "center", borderBottom: i < scorers.length - 1 ? `1px solid ${C.line}` : "none" }}>
+        {visible.map((r, i) => (
+          <div key={r.name + r.teamId} className="f-body" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 44px", fontSize: 13, padding: "11px 12px", alignItems: "center", borderBottom: i < visible.length - 1 ? `1px solid ${C.line}` : "none" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, color: C.soil, fontWeight: 600 }}>
               <span className="f-mono" style={{ fontSize: 10.5, opacity: 0.4, width: 12 }}>{i + 1}</span>{r.name}
             </div>
             <div className="f-body" style={{ color: C.soil, opacity: 0.65, fontSize: 12.5 }}>{r.teamLabel}</div>
-            <div className="f-mono" style={{ textAlign: "center", fontWeight: 700, color: C.pitch }}>{r.goals}</div>
+            <div className="f-mono" style={{ textAlign: "center", fontWeight: 700, color: C.pitch }}>{r[valueKey]}</div>
           </div>
         ))}
+        {rows.length === 0 && <div className="f-body" style={{ padding: "16px 12px", color: C.soil, opacity: 0.5, fontSize: 12.5, textAlign: "center" }}>{emptyText}</div>}
       </div>
-      {scorers.length === 0 && <div className="f-body" style={{ color: C.chalk, opacity: 0.6, textAlign: "center", marginTop: 40 }}>No goals recorded yet in this competition.</div>}
     </div>
   );
 }
 
-function MatchDetail({ match, teamName, players, votedMatches, onVote, onTeamTap, onClose }) {
+function RankingsTab({ matches, players, teamName }) {
+  const scorers = computeTopScorers(matches, teamName);
+  const assists = computeTopAssists(matches, teamName);
+  const keepers = computeBestGoalkeepers(matches, players, teamName);
+  return (
+    <div style={{ paddingBottom: 90 }}>
+      <RankingList title="Scorers" rows={scorers} columnLabel="GLS" valueKey="goals" emptyText="No goals recorded yet in this competition." />
+      <RankingList title="Assists" rows={assists} columnLabel="AST" valueKey="assists" emptyText="No assists recorded yet in this competition." />
+      <RankingList title="Best Goalkeeper" rows={keepers} columnLabel="CS" valueKey="cleanSheets" emptyText="No goalkeeper data yet — set a lineup's GK row and finish a match to see this." />
+    </div>
+  );
+}
+
+function MatchDetail({ match, teamName, players, referees, votedMatches, onVote, onTeamTap, onPlayerTap, onRefereeTap, onClose }) {
   const [section, setSection] = useState("lineups");
   if (!match) return null;
 
@@ -1250,10 +1480,21 @@ function MatchDetail({ match, teamName, players, votedMatches, onVote, onTeamTap
   const teamBRoster = players.filter((p) => playerTeamIds(p).includes(match.teamBId));
   const lineupAEntries = ((match.lineups && match.lineups.teamA) || []).map(normalizeLineupEntry);
   const lineupBEntries = ((match.lineups && match.lineups.teamB) || []).map(normalizeLineupEntry);
-  const lineupA = teamARoster.filter((p) => lineupAEntries.some((e) => e.id === p.id));
-  const lineupB = teamBRoster.filter((p) => lineupBEntries.some((e) => e.id === p.id));
-  const rowOverridesA = Object.fromEntries(lineupAEntries.filter((e) => e.row).map((e) => [e.id, e.row]));
-  const rowOverridesB = Object.fromEntries(lineupBEntries.filter((e) => e.row).map((e) => [e.id, e.row]));
+  const lineupA = teamARoster.filter((p) => lineupAEntries.some((e) => e.id === p.id && e.row !== "sub")).map((p) => {
+    const entry = lineupAEntries.find((e) => e.id === p.id);
+    return entry && entry.x != null && entry.y != null ? { ...p, _x: entry.x, _y: entry.y } : p;
+  });
+  const lineupB = teamBRoster.filter((p) => lineupBEntries.some((e) => e.id === p.id && e.row !== "sub")).map((p) => {
+    const entry = lineupBEntries.find((e) => e.id === p.id);
+    return entry && entry.x != null && entry.y != null ? { ...p, _x: entry.x, _y: entry.y } : p;
+  });
+  const subsA = teamARoster.filter((p) => lineupAEntries.some((e) => e.id === p.id && e.row === "sub"));
+  const subsB = teamBRoster.filter((p) => lineupBEntries.some((e) => e.id === p.id && e.row === "sub"));
+  const rowOverridesA = Object.fromEntries(lineupAEntries.filter((e) => e.row && e.row !== "sub").map((e) => [e.id, e.row]));
+  const rowOverridesB = Object.fromEntries(lineupBEntries.filter((e) => e.row && e.row !== "sub").map((e) => [e.id, e.row]));
+  const referee = (referees || []).find((r) => r.id === match.refereeId) || null;
+  const assistant1Name = match.assistant1Name || null;
+  const assistant2Name = match.assistant2Name || null;
 
   const scorers = match.scorers || [];
   const cards = match.cards || [];
@@ -1321,7 +1562,14 @@ function MatchDetail({ match, teamName, players, votedMatches, onVote, onTeamTap
       </div>
 
       {section === "lineups" && (
-        <PitchFormation lineupA={lineupA} lineupB={lineupB} labelA={a} labelB={b} rowOverridesA={rowOverridesA} rowOverridesB={rowOverridesB} />
+        <PitchFormation
+          lineupA={lineupA} lineupB={lineupB} labelA={a} labelB={b}
+          rowOverridesA={rowOverridesA} rowOverridesB={rowOverridesB}
+          subsA={subsA} subsB={subsB}
+          referee={referee} assistant1Name={assistant1Name} assistant2Name={assistant2Name}
+          onPlayerTap={onPlayerTap}
+          onRefereeTap={() => referee && onRefereeTap && onRefereeTap(referee.id)}
+        />
       )}
 
       {section === "events" && (
@@ -1391,7 +1639,7 @@ function MatchDetail({ match, teamName, players, votedMatches, onVote, onTeamTap
   );
 }
 
-function CompetitionProfile({ competition, teams, matches, teamName, teamGroup, votedMatches, onVote, onTeamTap, onOpenMatch, onClose }) {
+function CompetitionProfile({ competition, teams, matches, players, teamName, teamGroup, votedMatches, onVote, onTeamTap, onOpenMatch, onClose }) {
   const [section, setSection] = useState("matches");
   if (!competition) return null;
 
@@ -1415,7 +1663,7 @@ function CompetitionProfile({ competition, teams, matches, teamName, teamGroup, 
       </div>
 
       <div style={{ display: "flex", gap: 6, marginBottom: 16, overflowX: "auto", paddingBottom: 2 }}>
-        {[{ key: "matches", label: "Matches" }, { key: "table", label: "Table" }, { key: "knockout", label: "Knockout" }, { key: "scorers", label: "Scorers" }].map((s) => (
+        {[{ key: "matches", label: "Matches" }, { key: "table", label: "Table" }, { key: "knockout", label: "Knockout" }, { key: "rankings", label: "Rankings" }].map((s) => (
           <button
             key={s.key}
             onClick={() => setSection(s.key)}
@@ -1432,7 +1680,7 @@ function CompetitionProfile({ competition, teams, matches, teamName, teamGroup, 
       </div>
 
       {section === "table" && <TableTab competition={competition} teams={teams} matches={matches} onTeamTap={onTeamTap} />}
-      {section === "scorers" && <ScorersTab matches={matches} teamName={teamName} />}
+      {section === "rankings" && <RankingsTab matches={matches} players={players} teamName={teamName} />}
       {section === "matches" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
           {groups.map((g) => {
@@ -1490,7 +1738,7 @@ function Field({ label, children }) {
 const inputStyle = { width: "100%", boxSizing: "border-box", padding: "9px 11px", borderRadius: 9, border: `1px solid ${C.line}`, fontSize: 14, fontFamily: "'Work Sans', sans-serif", background: C.chalk, color: C.soil };
 const btnStyle = (bg, color) => ({ background: bg, color, border: "none", borderRadius: 9, padding: "9px 14px", fontSize: 13, fontWeight: 700, fontFamily: "'Work Sans', sans-serif", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 });
 
-function MatchManagementRow({ match, teamName_, updateMatch, removeMatch, players }) {
+function MatchManagementRow({ match, teamName_, updateMatch, removeMatch, players, referees }) {
   const [expanded, setExpanded] = useState(false);
   return (
     <div style={{ background: C.chalk, borderRadius: 14, padding: 12, border: `1px solid ${C.line}` }}>
@@ -1520,6 +1768,7 @@ function MatchManagementRow({ match, teamName_, updateMatch, removeMatch, player
             </select>
           </div>
           <LineupRow match={match} updateMatch={updateMatch} players={players} />
+          <RefereeAssignmentRow match={match} updateMatch={updateMatch} referees={referees} />
           <ScorerRow match={match} updateMatch={updateMatch} />
           <CardsRow match={match} updateMatch={updateMatch} />
           <CommentaryRow match={match} updateMatch={updateMatch} />
@@ -1563,6 +1812,41 @@ function ScorerRow({ match, updateMatch }) {
         </select>
         <input type="number" min={1} style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 46 }} value={goals} onChange={(e) => setGoals(e.target.value)} />
         <button onClick={addScorer} style={{ ...btnStyle(C.pitch, C.chalk), padding: "7px 9px" }}><Plus size={13} /></button>
+      </div>
+    </div>
+  );
+}
+
+function AssistRow({ match, updateMatch }) {
+  const [name, setName] = useState("");
+  const [teamId, setTeamId] = useState(match.teamAId);
+  const [assists, setAssists] = useState(1);
+
+  const addAssist = () => {
+    if (!name.trim()) return;
+    const list = [...(match.assists || []), { id: uid(), name: name.trim(), teamId, assists: Number(assists) || 1 }];
+    updateMatch(match.id, { assists: list });
+    setName(""); setAssists(1);
+  };
+  const removeAssist = (id) => updateMatch(match.id, { assists: (match.assists || []).filter((s) => s.id !== id) });
+
+  return (
+    <div style={{ marginTop: 8, borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
+      <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginBottom: 6 }}>ASSISTS</div>
+      {(match.assists || []).map((s) => (
+        <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5, padding: "4px 0" }} className="f-body">
+          <span style={{ color: C.soil }}>{s.name} ({s.assists})</span>
+          <button onClick={() => removeAssist(s.id)} style={{ background: "none", border: "none", cursor: "pointer" }}><Trash2 size={12} color={C.rust} /></button>
+        </div>
+      ))}
+      <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+        <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px" }} placeholder="Player name" value={name} onChange={(e) => setName(e.target.value)} />
+        <select style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 70 }} value={teamId} onChange={(e) => setTeamId(e.target.value)}>
+          <option value={match.teamAId}>Home</option>
+          <option value={match.teamBId}>Away</option>
+        </select>
+        <input type="number" min={1} style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 46 }} value={assists} onChange={(e) => setAssists(e.target.value)} />
+        <button onClick={addAssist} style={{ ...btnStyle(C.pitch, C.chalk), padding: "7px 9px" }}><Plus size={13} /></button>
       </div>
     </div>
   );
@@ -1612,13 +1896,11 @@ function LineupRow({ match, updateMatch, players }) {
   const entriesA = ((match.lineups && match.lineups.teamA) || []).map(normalizeLineupEntry);
   const entriesB = ((match.lineups && match.lineups.teamB) || []).map(normalizeLineupEntry);
 
-  const toggle = (side, player) => {
+  const setStatus = (side, player, status) => {
     const key = side === "A" ? "teamA" : "teamB";
     const current = ((match.lineups && match.lineups[key]) || []).map(normalizeLineupEntry);
-    const exists = current.some((e) => e.id === player.id);
-    const next = exists
-      ? current.filter((e) => e.id !== player.id)
-      : [...current, { id: player.id, row: positionRow(player.position) }];
+    const withoutPlayer = current.filter((e) => e.id !== player.id);
+    const next = status === "out" ? withoutPlayer : [...withoutPlayer, { id: player.id, row: positionRow(player.position), sub: status === "sub" }];
     updateMatch(match.id, { lineups: { ...(match.lineups || {}), [key]: next } });
   };
 
@@ -1634,13 +1916,22 @@ function LineupRow({ match, updateMatch, players }) {
       {roster.length === 0 && <div className="f-body" style={{ fontSize: 11, color: C.soil, opacity: 0.5 }}>No roster on file.</div>}
       {roster.map((p) => {
         const entry = entries.find((e) => e.id === p.id);
+        const status = !entry ? "out" : entry.sub ? "sub" : "start";
         return (
-          <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 5, padding: "2px 0" }}>
-            <label className="f-body" style={{ fontSize: 12, color: C.soil, display: "flex", alignItems: "center", gap: 5, flex: 1, minWidth: 0 }}>
-              <input type="checkbox" checked={!!entry} onChange={() => toggle(side, p)} />
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}{p.number ? ` #${p.number}` : ""}</span>
-            </label>
-            {entry && (
+          <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 0", flexWrap: "wrap" }}>
+            <span className="f-body" style={{ fontSize: 12, color: C.soil, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {p.name}{p.number ? ` #${p.number}` : ""}
+            </span>
+            <select
+              value={status}
+              onChange={(e) => setStatus(side, p, e.target.value)}
+              style={{ fontSize: 10, padding: "2px 3px", borderRadius: 6, border: `1px solid ${C.line}`, flexShrink: 0 }}
+            >
+              <option value="out">Not in squad</option>
+              <option value="start">Starting</option>
+              <option value="sub">Substitute</option>
+            </select>
+            {status === "start" && (
               <select
                 value={entry.row || positionRow(p.position)}
                 onChange={(e) => setRow(side, p.id, e.target.value)}
@@ -1660,10 +1951,39 @@ function LineupRow({ match, updateMatch, players }) {
 
   return (
     <div style={{ marginTop: 8, borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
-      <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginBottom: 6 }}>LINEUPS — tick who's playing. Use the line dropdown if someone's playing out of their usual position for this match.</div>
+      <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginBottom: 6 }}>LINEUPS — set each player as Starting or Substitute. Use the line dropdown for anyone playing out of their usual position.</div>
       <div style={{ display: "flex", gap: 10 }}>
         <Side label="HOME" roster={teamARoster} entries={entriesA} side="A" />
         <Side label="AWAY" roster={teamBRoster} entries={entriesB} side="B" />
+      </div>
+    </div>
+  );
+}
+
+function RefereeAssignmentRow({ match, updateMatch, referees }) {
+  const [assistant1, setAssistant1] = useState(match.assistant1Name || "");
+  const [assistant2, setAssistant2] = useState(match.assistant2Name || "");
+
+  const saveAssistants = () => updateMatch(match.id, { assistant1Name: assistant1.trim(), assistant2Name: assistant2.trim() });
+
+  return (
+    <div style={{ marginTop: 8, borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
+      <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginBottom: 6 }}>MATCH OFFICIALS</div>
+      <Field label="Referee">
+        <select
+          style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px" }}
+          value={match.refereeId || ""}
+          onChange={(e) => updateMatch(match.id, { refereeId: e.target.value || null })}
+        >
+          <option value="">Not assigned</option>
+          {referees.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+        </select>
+      </Field>
+      {referees.length === 0 && <div className="f-body" style={{ fontSize: 11, color: C.soil, opacity: 0.5, marginBottom: 8 }}>No referees added yet — add one in the REFEREES section above.</div>}
+      <div style={{ display: "flex", gap: 6 }}>
+        <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px" }} placeholder="Assistant referee 1" value={assistant1} onChange={(e) => setAssistant1(e.target.value)} />
+        <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px" }} placeholder="Assistant referee 2" value={assistant2} onChange={(e) => setAssistant2(e.target.value)} />
+        <button onClick={saveAssistants} style={{ ...btnStyle(C.pitch, C.chalk), padding: "7px 10px", fontSize: 12 }}>Save</button>
       </div>
     </div>
   );
@@ -2062,7 +2382,7 @@ function NewsModerationRow({ post, news, setNews, removeNews }) {
   );
 }
 
-function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiveCompetitionId, teams, setTeams, matches, setMatches, news, setNews, sponsors, setSponsors, ads, setAds, players, setPlayers, transfers, setTransfers, unlocked, setUnlocked }) {
+function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiveCompetitionId, teams, setTeams, matches, setMatches, news, setNews, sponsors, setSponsors, ads, setAds, players, setPlayers, transfers, setTransfers, referees, setReferees, unlocked, setUnlocked }) {
   const [pin, setPin] = useState("");
   const [pinError, setPinError] = useState(false);
   const [teamName, setTeamName] = useState("");
@@ -2360,7 +2680,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {friendlyMatches.map((m) => (
-            <MatchManagementRow key={m.id} match={m} teamName_={teamName_} updateMatch={updateMatch} removeMatch={removeMatch} players={players} />
+            <MatchManagementRow key={m.id} match={m} teamName_={teamName_} updateMatch={updateMatch} removeMatch={removeMatch} players={players} referees={referees} />
           ))}
           {friendlyMatches.length === 0 && <div className="f-body" style={{ fontSize: 12, color: C.chalk, opacity: 0.5 }}>No friendlies yet.</div>}
         </div>
@@ -2501,7 +2821,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
                 </button>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {competitionMatches.map((m) => (
-                    <MatchManagementRow key={m.id} match={m} teamName_={teamName_} updateMatch={updateMatch} removeMatch={removeMatch} players={players} />
+                    <MatchManagementRow key={m.id} match={m} teamName_={teamName_} updateMatch={updateMatch} removeMatch={removeMatch} players={players} referees={referees} />
                   ))}
                   {competitionMatches.length === 0 && <div className="f-body" style={{ fontSize: 12, color: C.soil, opacity: 0.5 }}>No fixtures yet for this competition.</div>}
                 </div>
@@ -2616,6 +2936,7 @@ export default function AuyoFootballApp() {
   const [news, setNewsState] = useState([]);
   const [sponsors, setSponsorsState] = useState([]);
   const [ads, setAdsState] = useState([]);
+  const [referees, setRefereesState] = useState([]);
   const [players, setPlayersState] = useState([]);
   const [transfers, setTransfersState] = useState([]);
   const [activeCompetitionId, setActiveCompetitionId] = useState("");
@@ -2626,7 +2947,55 @@ export default function AuyoFootballApp() {
   const [selectedPlayerId, setSelectedPlayerId] = useState(null);
   const [selectedPlayerTeamId, setSelectedPlayerTeamId] = useState(null);
   const [selectedMatchId, setSelectedMatchId] = useState(null);
+  const [selectedRefereeId, setSelectedRefereeId] = useState(null);
   const [unlocked, setUnlocked] = useState(false);
+
+  // Applies a navigation state to the screen. This is the one place that
+  // actually changes which screen is showing — both normal in-app taps and
+  // the browser/hardware back button funnel through here, so the two never
+  // fall out of sync.
+  const applyNavState = useCallback((state) => {
+    setTab(state.tab || "scores");
+    setSelectedTeamId(state.selectedTeamId ?? null);
+    setSelectedPlayerId(state.selectedPlayerId ?? null);
+    setSelectedPlayerTeamId(state.selectedPlayerTeamId ?? null);
+    setSelectedCompetitionId(state.selectedCompetitionId ?? null);
+    setSelectedMatchId(state.selectedMatchId ?? null);
+    setSelectedRefereeId(state.selectedRefereeId ?? null);
+  }, []);
+
+  // Moves forward to a new screen and records it in browser history, so the
+  // back button (hardware key or swipe-back gesture) has something real to
+  // return to instead of closing the whole app.
+  const navigateTo = useCallback((partial) => {
+    const newState = {
+      tab: partial.tab,
+      selectedTeamId: partial.selectedTeamId ?? null,
+      selectedPlayerId: partial.selectedPlayerId ?? null,
+      selectedPlayerTeamId: partial.selectedPlayerTeamId ?? null,
+      selectedCompetitionId: partial.selectedCompetitionId ?? null,
+      selectedMatchId: partial.selectedMatchId ?? null,
+      selectedRefereeId: partial.selectedRefereeId ?? null,
+    };
+    window.history.pushState(newState, "", "");
+    applyNavState(newState);
+  }, [applyNavState]);
+
+  // Every "✕ Close" button uses this too, so an in-app close button and the
+  // phone's own back button always behave identically.
+  const goBack = useCallback(() => {
+    window.history.back();
+  }, []);
+
+  useEffect(() => {
+    const rootState = { tab: "scores", selectedTeamId: null, selectedPlayerId: null, selectedPlayerTeamId: null, selectedCompetitionId: null, selectedMatchId: null, selectedRefereeId: null };
+    window.history.replaceState(rootState, "", "");
+    const onPopState = (e) => {
+      applyNavState(e.state || rootState);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [applyNavState]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [likedPosts, setLikedPostsState] = useState(() => {
@@ -2653,7 +3022,7 @@ export default function AuyoFootballApp() {
         // Fetch everything at once instead of one-at-a-time — with 8 separate
         // documents, doing this sequentially meant every visitor waited for
         // 8 full network round-trips in a row before seeing anything.
-        const [comps0, t0, m0, n0, sp0, ad0, pl0, tr0] = await Promise.all([
+        const [comps0, t0, m0, n0, sp0, ad0, pl0, tr0, ref0] = await Promise.all([
           loadKey("auyo-competitions"),
           loadKey("auyo-teams"),
           loadKey("auyo-matches"),
@@ -2662,6 +3031,7 @@ export default function AuyoFootballApp() {
           loadKey("auyo-ads"),
           loadKey("auyo-players"),
           loadKey("auyo-transfers"),
+          loadKey("auyo-referees"),
         ]);
 
         let comps = comps0;
@@ -2672,6 +3042,7 @@ export default function AuyoFootballApp() {
         const ad = ad0 || [];
         const pl = pl0 || [];
         const tr = tr0 || [];
+        const ref = ref0 || [];
 
         // Seeding only ever matters the very first time the database is empty.
         if (!comps) { comps = seedCompetitions(); await saveKey("auyo-competitions", comps); }
@@ -2679,7 +3050,7 @@ export default function AuyoFootballApp() {
         if (!m) { m = seedMatches(comps[0].id, t); await saveKey("auyo-matches", m); }
         if (!n) { n = seedNews(); await saveKey("auyo-news", n); }
 
-        setCompetitionsState(comps); setTeamsState(t); setMatchesState(m); setNewsState(n); setSponsorsState(sp); setAdsState(ad); setPlayersState(pl); setTransfersState(tr);
+        setCompetitionsState(comps); setTeamsState(t); setMatchesState(m); setNewsState(n); setSponsorsState(sp); setAdsState(ad); setPlayersState(pl); setTransfersState(tr); setRefereesState(ref);
         setActiveCompetitionId(comps[0]?.id || "");
         setLoading(false);
       } catch (e) {
@@ -2705,8 +3076,10 @@ export default function AuyoFootballApp() {
   const setNews = useCallback((v) => { setNewsState(v); safeSave("auyo-news", v); }, [safeSave]);
   const setSponsors = useCallback((v) => { setSponsorsState(v); safeSave("auyo-sponsors", v); }, [safeSave]);
   const setAds = useCallback((v) => { setAdsState(v); safeSave("auyo-ads", v); }, [safeSave]);
+  const setReferees = useCallback((v) => { setRefereesState(v); safeSave("auyo-referees", v); }, [safeSave]);
   const setPlayers = useCallback((v) => { setPlayersState(v); safeSave("auyo-players", v); }, [safeSave]);
   const setTransfers = useCallback((v) => { setTransfersState(v); safeSave("auyo-transfers", v); }, [safeSave]);
+  const setReferees = useCallback((v) => { setRefereesState(v); safeSave("auyo-referees", v); }, [safeSave]);
 
   const toggleLike = useCallback((postId) => {
     setLikedPostsState((prevLiked) => {
@@ -2853,6 +3226,7 @@ export default function AuyoFootballApp() {
                     competition={competitions.find((c) => c.id === selectedCompetitionId)}
                     teams={teams.filter((t) => teamInCompetition(t, selectedCompetitionId))}
                     matches={matches.filter((m) => m.competitionId === selectedCompetitionId)}
+                    players={players}
                     teamName={teamName} teamGroup={teamGroup} votedMatches={votedMatches} onVote={onVote}
                     onTeamTap={(teamId) => { setPreviousTab("competition"); setSelectedTeamId(teamId); setTab("teams"); }}
                     onOpenMatch={(matchId) => { setPreviousTab("competition"); setSelectedMatchId(matchId); setTab("match"); }}
@@ -2865,9 +3239,27 @@ export default function AuyoFootballApp() {
                   if (!m) return null;
                   return (
                     <MatchDetail
-                      match={m} teamName={teamName} players={players} votedMatches={votedMatches} onVote={onVote}
+                      match={m} teamName={teamName} players={players} referees={referees} votedMatches={votedMatches} onVote={onVote}
                       onTeamTap={(teamId) => { setSelectedTeamId(teamId); setTab("teams"); }}
+                      onPlayerTap={(playerId) => {
+                        const p = players.find((pl) => pl.id === playerId);
+                        const teamCtx = p && playerTeamIds(p).includes(m.teamAId) ? m.teamAId : m.teamBId;
+                        setSelectedPlayerId(playerId);
+                        setSelectedPlayerTeamId(teamCtx);
+                        setTab("player");
+                      }}
+                      onRefereeTap={(refereeId) => { setSelectedRefereeId(refereeId); setTab("referee"); }}
                       onClose={() => { setSelectedMatchId(null); setTab(previousTab); }}
+                    />
+                  );
+                })()}
+                {tab === "referee" && (() => {
+                  const ref = referees.find((r) => r.id === selectedRefereeId);
+                  if (!ref) return null;
+                  return (
+                    <RefereeProfile
+                      referee={ref} matches={matches} teamName={teamName}
+                      onClose={() => { setSelectedRefereeId(null); setTab(previousTab); }}
                     />
                   );
                 })()}
@@ -2875,7 +3267,7 @@ export default function AuyoFootballApp() {
                 {tab === "news" && <NewsTab news={news} setNews={setNews} likedPosts={likedPosts} toggleLike={toggleLike} />}
                 {tab === "search" && (
                   <SearchTab
-                    teams={teams} players={players} competitions={competitions} matches={matches} teamName={teamName}
+                    teams={teams} players={players} competitions={competitions} matches={matches} referees={referees} teamName={teamName}
                     onOpenTeam={(teamId) => {
                       setSelectedTeamId(teamId);
                       setTab("teams");
@@ -2887,6 +3279,7 @@ export default function AuyoFootballApp() {
                     }}
                     onOpenCompetition={(competitionId) => { setSelectedCompetitionId(competitionId); setTab("competition"); }}
                     onOpenMatches={() => setTab("scores")}
+                    onOpenReferee={(refereeId) => { setSelectedRefereeId(refereeId); setTab("referee"); }}
                     onClose={() => setTab(previousTab)}
                   />
                 )}
