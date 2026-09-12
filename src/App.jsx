@@ -322,6 +322,7 @@ function LegalTab({ onClose }) {
   );
 }
 
+
 function StatusPill({ status }) {
   if (status === "live")
     return (
@@ -1190,6 +1191,7 @@ function TeamProfile({ team, players, matches, onClose }) {
   );
 }
 
+
 function TeamsTab({ competition, teams, players, matches, selectedTeamId, setSelectedTeamId, onClose }) {
   const selectedTeam = teams.find((t) => t.id === selectedTeamId);
 
@@ -1417,6 +1419,7 @@ function SearchTab({ teams, players, competitions, matches, referees, teamName, 
     </div>
   );
 }
+
 
 function RankingList({ title, rows, columnLabel, valueKey, emptyText }) {
   const [expanded, setExpanded] = useState(false);
@@ -2341,6 +2344,7 @@ function MotmRow({ match, updateMatch }) {
   );
 }
 
+
 function NewsModerationRow({ post, news, setNews, removeNews }) {
   const [expanded, setExpanded] = useState(false);
   const comments = post.comments || [];
@@ -2946,6 +2950,34 @@ export default function AuyoFootballApp() {
   const [selectedRefereeId, setSelectedRefereeId] = useState(null);
   const [unlocked, setUnlocked] = useState(false);
 
+  // Push a browser history entry for every navigation change, so the
+  // phone's back button/gesture steps back through the app's screens
+  // instead of exiting the whole app (which has no other history entry
+  // to fall back to in a single-page app like this).
+  const isPoppingRef = useRef(false);
+  const navState = { tab, selectedTeamId, selectedCompetitionId, selectedPlayerId, selectedPlayerTeamId, selectedMatchId, selectedRefereeId };
+  useEffect(() => {
+    if (isPoppingRef.current) { isPoppingRef.current = false; return; }
+    window.history.pushState(navState, "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, selectedTeamId, selectedCompetitionId, selectedPlayerId, selectedPlayerTeamId, selectedMatchId, selectedRefereeId]);
+
+  useEffect(() => {
+    const onPopState = (e) => {
+      isPoppingRef.current = true;
+      const s = e.state || {};
+      setTab(s.tab || "scores");
+      setSelectedTeamId(s.selectedTeamId ?? null);
+      setSelectedCompetitionId(s.selectedCompetitionId ?? null);
+      setSelectedPlayerId(s.selectedPlayerId ?? null);
+      setSelectedPlayerTeamId(s.selectedPlayerTeamId ?? null);
+      setSelectedMatchId(s.selectedMatchId ?? null);
+      setSelectedRefereeId(s.selectedRefereeId ?? null);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
   // Applies a navigation state to the screen. This is the one place that
   // actually changes which screen is showing — both normal in-app taps and
   // the browser/hardware back button funnel through here, so the two never
@@ -3138,6 +3170,29 @@ export default function AuyoFootballApp() {
     ...(isAdminAccess ? [{ key: "admin", label: "Admin", icon: Lock }] : []),
   ];
 
+  // Swiping left/right moves between the main bottom-nav tabs. Only active
+  // when actually on one of those tabs — inside a drill-down screen (a team,
+  // competition, match, etc.) a swipe shouldn't unexpectedly jump elsewhere.
+  const touchStartXRef = useRef(null);
+  const touchStartYRef = useRef(null);
+  const handleTouchStart = (e) => {
+    touchStartXRef.current = e.touches[0].clientX;
+    touchStartYRef.current = e.touches[0].clientY;
+  };
+  const handleTouchEnd = (e) => {
+    if (touchStartXRef.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartXRef.current;
+    const dy = e.changedTouches[0].clientY - touchStartYRef.current;
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+    // Ignore mostly-vertical swipes (scrolling) and short swipes.
+    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    const idx = tabs.findIndex((t) => t.key === tab);
+    if (idx === -1) return;
+    if (dx < 0 && idx < tabs.length - 1) setTab(tabs[idx + 1].key);
+    if (dx > 0 && idx > 0) setTab(tabs[idx - 1].key);
+  };
+
   return (
     <div style={{ minHeight: "100vh", background: C.pitchDark, display: "flex", justifyContent: "center" }}>
       <style>{FONTS}</style>
@@ -3164,45 +3219,10 @@ export default function AuyoFootballApp() {
             </div>
           </div>
 
-          {competitions.length > 0 && (
-            <div style={{ marginTop: 16, position: "relative" }}>
-              <button
-                onClick={() => setPickerOpen(!pickerOpen)}
-                style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 999, padding: "7px 12px", display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}
-              >
-                <span className="f-body" style={{ color: C.chalk, fontSize: 13, fontWeight: 600 }}>{activeCompetition?.name || "Select competition"}</span>
-                <ChevronDown size={14} color={C.chalk} style={{ transform: pickerOpen ? "rotate(180deg)" : "none" }} />
-              </button>
-              {activeCompetition?.subtitle && (
-                <div className="f-mono" style={{ fontSize: 10, color: C.chalk, opacity: 0.55, marginTop: 6, marginLeft: 4 }}>{activeCompetition.subtitle}</div>
-              )}
-              {pickerOpen && (
-                <div style={{ position: "absolute", top: 40, left: 0, background: C.chalk, borderRadius: 12, border: `1px solid ${C.line}`, minWidth: 200, zIndex: 20, boxShadow: "0 8px 20px rgba(0,0,0,0.25)", overflow: "hidden" }}>
-                  {competitions.map((c) => (
-                    <div
-                      key={c.id}
-                      onClick={() => { setActiveCompetitionId(c.id); setSelectedCompetitionId(c.id); setPreviousTab(tab); setTab("competition"); setPickerOpen(false); }}
-                      style={{ padding: "10px 14px", cursor: "pointer", background: c.id === activeCompetitionId ? "rgba(27,67,50,0.08)" : "transparent", borderBottom: `1px solid ${C.line}` }}
-                    >
-                      <div className="f-body" style={{ fontSize: 13, color: C.soil, fontWeight: c.id === activeCompetitionId ? 700 : 500 }}>{c.name}</div>
-                      {c.subtitle && <div className="f-mono" style={{ fontSize: 10, color: C.soil, opacity: 0.5 }}>{c.subtitle}</div>}
-                    </div>
-                  ))}
-                  {isAdminAccess && (
-                    <div onClick={() => { setTab("admin"); setPickerOpen(false); }} style={{ padding: "10px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-                      <Plus size={13} color={C.pitch} />
-                      <span className="f-body" style={{ fontSize: 12.5, color: C.pitch, fontWeight: 600 }}>Add competition</span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
           <AdBanner ads={ads} />
           <SponsorBanner sponsors={sponsors} />
 
-          <div style={{ marginTop: 20 }}>
+          <div style={{ marginTop: 20 }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
             {saveError && (
               <div className="f-body" style={{ background: C.rust, color: C.chalk, fontSize: 12, padding: "8px 12px", borderRadius: 10, marginBottom: 12, textAlign: "center" }}>
                 ⚠ Couldn't save your last change — check your connection or Firestore rules.
