@@ -3107,7 +3107,6 @@ export default function AuyoFootballApp() {
   const setReferees = useCallback((v) => { setRefereesState(v); safeSave("auyo-referees", v); }, [safeSave]);
   const setPlayers = useCallback((v) => { setPlayersState(v); safeSave("auyo-players", v); }, [safeSave]);
   const setTransfers = useCallback((v) => { setTransfersState(v); safeSave("auyo-transfers", v); }, [safeSave]);
-  const setReferees = useCallback((v) => { setRefereesState(v); safeSave("auyo-referees", v); }, [safeSave]);
 
   const toggleLike = useCallback((postId) => {
     setLikedPostsState((prevLiked) => {
