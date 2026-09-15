@@ -411,7 +411,7 @@ function MatchCard({ match, teamName, teamGroup, getCompetitionName, onOpenMatch
         </div>
         {match.scorers && match.scorers.length > 0 && (
           <div className="f-body" style={{ fontSize: 11.5, color: C.soil, opacity: 0.6, marginTop: 8, borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
-            ⚽ {match.scorers.map((s) => `${s.name} ${s.goals > 1 ? `(${s.goals})` : ""}`).join(", ")}
+            ⚽ {[...match.scorers].sort((a, b) => (Number(a.minute) || 0) - (Number(b.minute) || 0)).map((s) => `${s.name} ${s.minute}'${s.ownGoal ? " (OG)" : ""}`).join(", ")}
           </div>
         )}
         <div className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.45, marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -706,9 +706,10 @@ function computeTopScorers(matches, teamName) {
   const rows = {};
   matches.forEach((m) => {
     (m.scorers || []).forEach((s) => {
+      if (s.ownGoal) return; // an own goal never counts toward the scorer's personal tally
       const key = s.name.trim().toLowerCase() + "|" + s.teamId;
       if (!rows[key]) rows[key] = { name: s.name, teamId: s.teamId, goals: 0 };
-      rows[key].goals += Number(s.goals) || 0;
+      rows[key].goals += 1;
     });
   });
   return Object.values(rows)
@@ -720,10 +721,11 @@ function computeTopScorers(matches, teamName) {
 function computeTopAssists(matches, teamName) {
   const rows = {};
   matches.forEach((m) => {
-    (m.assists || []).forEach((s) => {
-      const key = s.name.trim().toLowerCase() + "|" + s.teamId;
-      if (!rows[key]) rows[key] = { name: s.name, teamId: s.teamId, assists: 0 };
-      rows[key].assists += Number(s.assists) || 0;
+    (m.scorers || []).forEach((s) => {
+      if (s.ownGoal || !s.assistName || !s.assistName.trim()) return;
+      const key = s.assistName.trim().toLowerCase() + "|" + s.teamId;
+      if (!rows[key]) rows[key] = { name: s.assistName.trim(), teamId: s.teamId, assists: 0 };
+      rows[key].assists += 1;
     });
   });
   return Object.values(rows)
@@ -767,16 +769,19 @@ function PlayerProfile({ player, team, goals, onClose }) {
   return (
     <div style={{ paddingBottom: 90 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <button onClick={onClose} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 999, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+        <button onClick={onClose} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 999, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
           <ArrowLeft size={16} color={C.chalk} />
         </button>
-        <span className="f-display" style={{ fontSize: 17, color: C.chalk }}>{player.name}</span>
-        <div style={{ width: 32 }} />
+        <div style={{ textAlign: "center" }}>
+          <div className="f-display" style={{ fontSize: 17, color: C.chalk, lineHeight: 1.1 }}>{player.name}</div>
+          {player.jerseyName && <div className="f-body" style={{ fontSize: 13, color: C.chalk, opacity: 0.55, marginTop: 3 }}>{player.jerseyName}</div>}
+        </div>
+        <div style={{ width: 32, flexShrink: 0 }} />
       </div>
 
       <div style={{ background: C.chalk, borderRadius: 16, padding: "22px 18px", border: `1px solid ${C.line}`, textAlign: "center" }}>
         {team && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: player.town ? 6 : 16 }}>
             {team.badgeUrl ? (
               <img src={team.badgeUrl} alt="" style={{ width: 26, height: 26, borderRadius: 7, objectFit: "cover" }} />
             ) : (
@@ -785,6 +790,11 @@ function PlayerProfile({ player, team, goals, onClose }) {
               </div>
             )}
             <span className="f-body" style={{ fontSize: 13, fontWeight: 600, color: C.soil }}>{team.name}</span>
+          </div>
+        )}
+        {player.town && (
+          <div className="f-body" style={{ fontSize: 11.5, color: C.soil, opacity: 0.6, marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+            <MapPin size={11} /> {player.town}
           </div>
         )}
 
@@ -1064,7 +1074,8 @@ function computePlayerGoals(matches, teamId, playerName) {
   let total = 0;
   matches.forEach((m) => {
     (m.scorers || []).forEach((s) => {
-      if (s.teamId === teamId && s.name.trim().toLowerCase() === key) total += Number(s.goals) || 0;
+      if (s.ownGoal) return; // an own goal never counts toward the scorer's personal tally
+      if (s.teamId === teamId && s.name.trim().toLowerCase() === key) total += 1;
     });
   });
   return total;
@@ -1785,69 +1796,47 @@ function MatchManagementRow({ match, teamName_, updateMatch, removeMatch, player
 function ScorerRow({ match, updateMatch }) {
   const [name, setName] = useState("");
   const [teamId, setTeamId] = useState(match.teamAId);
-  const [goals, setGoals] = useState(1);
+  const [minute, setMinute] = useState("");
+  const [ownGoal, setOwnGoal] = useState(false);
+  const [assistName, setAssistName] = useState("");
 
   const addScorer = () => {
     if (!name.trim()) return;
-    const scorers = [...(match.scorers || []), { id: uid(), name: name.trim(), teamId, goals: Number(goals) || 1 }];
+    const scorers = [...(match.scorers || []), {
+      id: uid(), name: name.trim(), teamId, minute: minute || "0",
+      ownGoal, assistName: ownGoal ? null : (assistName.trim() || null),
+    }];
     updateMatch(match.id, { scorers });
-    setName(""); setGoals(1);
+    setName(""); setMinute(""); setOwnGoal(false); setAssistName("");
   };
   const removeScorer = (id) => updateMatch(match.id, { scorers: (match.scorers || []).filter((s) => s.id !== id) });
 
   return (
     <div style={{ marginTop: 8, borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
-      <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginBottom: 6 }}>GOAL SCORERS</div>
-      {(match.scorers || []).map((s) => (
+      <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginBottom: 6 }}>GOALS</div>
+      {[...(match.scorers || [])].sort((a, b) => (Number(a.minute) || 0) - (Number(b.minute) || 0)).map((s) => (
         <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5, padding: "4px 0" }} className="f-body">
-          <span style={{ color: C.soil }}>{s.name} ({s.goals})</span>
+          <span style={{ color: C.soil }}>
+            {s.minute}' — {s.name}{s.ownGoal ? " (Own goal)" : s.assistName ? ` (assist: ${s.assistName})` : ""}
+          </span>
           <button onClick={() => removeScorer(s.id)} style={{ background: "none", border: "none", cursor: "pointer" }}><Trash2 size={12} color={C.rust} /></button>
         </div>
       ))}
-      <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-        <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px" }} placeholder="Scorer name" value={name} onChange={(e) => setName(e.target.value)} />
+      <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+        <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", flex: 1, minWidth: 100 }} placeholder="Scorer name" value={name} onChange={(e) => setName(e.target.value)} />
         <select style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 70 }} value={teamId} onChange={(e) => setTeamId(e.target.value)}>
           <option value={match.teamAId}>Home</option>
           <option value={match.teamBId}>Away</option>
         </select>
-        <input type="number" min={1} style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 46 }} value={goals} onChange={(e) => setGoals(e.target.value)} />
-        <button onClick={addScorer} style={{ ...btnStyle(C.pitch, C.chalk), padding: "7px 9px" }}><Plus size={13} /></button>
+        <input type="number" min={0} max={120} style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 55 }} placeholder="Min" value={minute} onChange={(e) => setMinute(e.target.value)} />
       </div>
-    </div>
-  );
-}
-
-function AssistRow({ match, updateMatch }) {
-  const [name, setName] = useState("");
-  const [teamId, setTeamId] = useState(match.teamAId);
-  const [assists, setAssists] = useState(1);
-
-  const addAssist = () => {
-    if (!name.trim()) return;
-    const list = [...(match.assists || []), { id: uid(), name: name.trim(), teamId, assists: Number(assists) || 1 }];
-    updateMatch(match.id, { assists: list });
-    setName(""); setAssists(1);
-  };
-  const removeAssist = (id) => updateMatch(match.id, { assists: (match.assists || []).filter((s) => s.id !== id) });
-
-  return (
-    <div style={{ marginTop: 8, borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
-      <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginBottom: 6 }}>ASSISTS</div>
-      {(match.assists || []).map((s) => (
-        <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5, padding: "4px 0" }} className="f-body">
-          <span style={{ color: C.soil }}>{s.name} ({s.assists})</span>
-          <button onClick={() => removeAssist(s.id)} style={{ background: "none", border: "none", cursor: "pointer" }}><Trash2 size={12} color={C.rust} /></button>
-        </div>
-      ))}
-      <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-        <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px" }} placeholder="Player name" value={name} onChange={(e) => setName(e.target.value)} />
-        <select style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 70 }} value={teamId} onChange={(e) => setTeamId(e.target.value)}>
-          <option value={match.teamAId}>Home</option>
-          <option value={match.teamBId}>Away</option>
-        </select>
-        <input type="number" min={1} style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 46 }} value={assists} onChange={(e) => setAssists(e.target.value)} />
-        <button onClick={addAssist} style={{ ...btnStyle(C.pitch, C.chalk), padding: "7px 9px" }}><Plus size={13} /></button>
-      </div>
+      <label className="f-body" style={{ fontSize: 11.5, color: C.soil, opacity: 0.75, display: "flex", alignItems: "center", gap: 5, marginTop: 6 }}>
+        <input type="checkbox" checked={ownGoal} onChange={(e) => { setOwnGoal(e.target.checked); if (e.target.checked) setAssistName(""); }} /> Own goal
+      </label>
+      {!ownGoal && (
+        <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", marginTop: 6 }} placeholder="Assisted by (optional)" value={assistName} onChange={(e) => setAssistName(e.target.value)} />
+      )}
+      <button onClick={addScorer} style={{ ...btnStyle(C.pitch, C.chalk), padding: "7px 9px", marginTop: 6 }}><Plus size={13} /> Add goal</button>
     </div>
   );
 }
@@ -2021,6 +2010,8 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
   const [headCoachPhotoUploading, setHeadCoachPhotoUploading] = useState(false);
   const [badgeUploading, setBadgeUploading] = useState(false);
   const [playerName, setPlayerName] = useState("");
+  const [playerJerseyName, setPlayerJerseyName] = useState("");
+  const [playerTown, setPlayerTown] = useState("");
   const [playerNumber, setPlayerNumber] = useState("");
   const [playerAge, setPlayerAge] = useState("");
   const [playerPosition, setPlayerPosition] = useState("");
@@ -2112,8 +2103,8 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
 
   const addPlayer = () => {
     if (!playerName.trim() || playerPhotoUploading) return;
-    setPlayers([...players, { id: uid(), teamIds: [team.id], name: playerName.trim(), number: playerNumber.trim(), age: playerAge.trim(), position: playerPosition.trim(), photoUrl: playerPhotoUrl || null }]);
-    setPlayerName(""); setPlayerNumber(""); setPlayerAge(""); setPlayerPosition(""); setPlayerPhotoUrl("");
+    setPlayers([...players, { id: uid(), teamIds: [team.id], name: playerName.trim(), jerseyName: playerJerseyName.trim() || null, town: playerTown.trim() || null, number: playerNumber.trim(), age: playerAge.trim(), position: playerPosition.trim(), photoUrl: playerPhotoUrl || null }]);
+    setPlayerName(""); setPlayerJerseyName(""); setPlayerTown(""); setPlayerNumber(""); setPlayerAge(""); setPlayerPosition(""); setPlayerPhotoUrl("");
   };
   // Removes this player from THIS team's roster only. If they have no other
   // team affiliations left afterward, the player record itself is removed.
@@ -2244,11 +2235,15 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
           />
 
           <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, margin: "10px 0 6px" }}>OR ADD A NEW PLAYER</div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
             <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", flex: 1, minWidth: 100 }} placeholder="Player name" value={playerName} onChange={(e) => setPlayerName(e.target.value)} />
+            <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", flex: 1, minWidth: 100 }} placeholder="Jersey name (if different)" value={playerJerseyName} onChange={(e) => setPlayerJerseyName(e.target.value)} />
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 50 }} placeholder="No." value={playerNumber} onChange={(e) => setPlayerNumber(e.target.value)} />
             <input type="number" min={0} style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 55 }} placeholder="Age" value={playerAge} onChange={(e) => setPlayerAge(e.target.value)} />
             <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 90 }} placeholder="Position" value={playerPosition} onChange={(e) => setPlayerPosition(e.target.value)} />
+            <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", flex: 1, minWidth: 90 }} placeholder="Town" value={playerTown} onChange={(e) => setPlayerTown(e.target.value)} />
           </div>
           <div style={{ marginTop: 6 }}>
             <input type="file" accept="image/*" onChange={handlePlayerPhotoSelect} style={{ ...inputStyle, fontSize: 12, padding: "6px 9px" }} />
@@ -2407,6 +2402,9 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
   const [compSubtitle, setCompSubtitle] = useState("");
   const [compHasGroups, setCompHasGroups] = useState(true);
   const [globalTeamName, setGlobalTeamName] = useState("");
+  const [refereeName, setRefereeName] = useState("");
+  const [refereePhotoUrl, setRefereePhotoUrl] = useState("");
+  const [refereePhotoUploading, setRefereePhotoUploading] = useState(false);
   const [showMatches, setShowMatches] = useState(false);
   const [transferPlayerQuery, setTransferPlayerQuery] = useState("");
   const [transferPlayerId, setTransferPlayerId] = useState("");
@@ -2468,6 +2466,27 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
     if (!globalTeamName.trim()) return;
     setTeams([...teams, { id: uid(), name: globalTeamName.trim(), competitions: [] }]);
     setGlobalTeamName("");
+  };
+
+  const addReferee = () => {
+    if (!refereeName.trim() || refereePhotoUploading) return;
+    setReferees([...referees, { id: uid(), name: refereeName.trim(), photoUrl: refereePhotoUrl || null }]);
+    setRefereeName(""); setRefereePhotoUrl("");
+  };
+  const removeReferee = (id) => setReferees(referees.filter((r) => r.id !== id));
+  const handleRefereePhotoSelect = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setRefereePhotoUploading(true);
+    try {
+      const url = await uploadImage(file, 400);
+      setRefereePhotoUrl(url);
+    } catch (err) {
+      console.error("Referee photo upload failed", err);
+      alert("Couldn't upload photo — check your connection and Firebase Storage rules.");
+    } finally {
+      setRefereePhotoUploading(false);
+    }
   };
 
   const recordTransfer = () => {
@@ -2608,6 +2627,45 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
             <TeamManagementRow key={t.id} team={t} updateTeam={updateTeam} removeTeam={removeTeam} players={players} setPlayers={setPlayers} competitions={competitions} teams={teams} />
           ))}
           {teams.length === 0 && <div className="f-body" style={{ fontSize: 12, color: C.soil, opacity: 0.5, marginTop: 8 }}>No teams yet — add one above.</div>}
+        </div>
+      </div>
+
+      <div>
+        <div className="f-mono" style={{ fontSize: 11, letterSpacing: 2, color: C.ochre, marginBottom: 10, fontWeight: 700 }}>REFEREES</div>
+        <div style={{ background: C.chalk, borderRadius: 14, padding: 14, border: `1px solid ${C.line}` }}>
+          <div className="f-body" style={{ fontSize: 11.5, color: C.soil, opacity: 0.6, marginBottom: 10, lineHeight: 1.4 }}>
+            Add match officials here — once added, you can assign a referee to any match from that match's MATCH OFFICIALS section.
+          </div>
+          {referees.map((r) => (
+            <div key={r.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: `1px solid ${C.line}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {r.photoUrl ? (
+                  <img src={r.photoUrl} alt="" style={{ width: 30, height: 30, borderRadius: 999, objectFit: "cover" }} />
+                ) : (
+                  <div style={{ width: 30, height: 30, borderRadius: 999, background: C.sand || "#F2E9D8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span className="f-mono" style={{ fontSize: 11, color: C.pitch, fontWeight: 700 }}>{r.name?.[0] || "?"}</span>
+                  </div>
+                )}
+                <span className="f-body" style={{ fontSize: 13, color: C.soil, fontWeight: 600 }}>{r.name}</span>
+              </div>
+              <button onClick={() => removeReferee(r.id)} style={{ background: "none", border: "none", cursor: "pointer" }}><Trash2 size={14} color={C.rust} /></button>
+            </div>
+          ))}
+          {referees.length === 0 && <div className="f-body" style={{ fontSize: 12, color: C.soil, opacity: 0.5, marginTop: 8, marginBottom: 10 }}>No referees added yet.</div>}
+          <div style={{ marginTop: 10 }}>
+            <Field label="Referee name"><input style={inputStyle} placeholder="e.g. Musa Ibrahim" value={refereeName} onChange={(e) => setRefereeName(e.target.value)} /></Field>
+            <Field label="Photo (optional)">
+              <input type="file" accept="image/*" onChange={handleRefereePhotoSelect} style={{ ...inputStyle, padding: "7px 9px" }} />
+              {refereePhotoUploading && <div className="f-mono" style={{ fontSize: 11, color: C.soil, opacity: 0.6, marginTop: 6 }}>Uploading…</div>}
+              {refereePhotoUrl && !refereePhotoUploading && (
+                <div style={{ marginTop: 8, position: "relative", display: "inline-block" }}>
+                  <img src={refereePhotoUrl} alt="" style={{ width: 50, height: 50, borderRadius: 999, objectFit: "cover", border: `1px solid ${C.line}` }} />
+                  <button onClick={() => setRefereePhotoUrl("")} style={{ position: "absolute", top: -6, right: -6, background: C.rust, border: "none", borderRadius: 999, width: 18, height: 18, color: C.chalk, cursor: "pointer", fontSize: 11, lineHeight: 1 }}>×</button>
+                </div>
+              )}
+            </Field>
+            <button onClick={addReferee} disabled={refereePhotoUploading} style={{ ...btnStyle(C.ochre, C.chalk), opacity: refereePhotoUploading ? 0.5 : 1 }}><Plus size={14} /> {refereePhotoUploading ? "Uploading…" : "Add referee"}</button>
+          </div>
         </div>
       </div>
 
@@ -3322,6 +3380,7 @@ export default function AuyoFootballApp() {
                     ads={ads} setAds={setAds}
                     players={players} setPlayers={setPlayers}
                     transfers={transfers} setTransfers={setTransfers}
+                    referees={referees} setReferees={setReferees}
                     unlocked={unlocked} setUnlocked={setUnlocked}
                   />
                 )}
