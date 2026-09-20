@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Radio, Newspaper, Table2, Lock, Plus, Trash2, Clock, MapPin, ChevronRight, Unlock, Target, ChevronDown, Share2, Info, Users, ArrowLeft, Search, ArrowLeftRight } from "lucide-react";
+import { Radio, Newspaper, Table2, Lock, Plus, Trash2, Clock, MapPin, ChevronRight, Unlock, Target, ChevronDown, Share2, Info, Users, ArrowLeft, Search, ArrowLeftRight, Footprints } from "lucide-react";
 import { storage, uploadImage } from "./storage";
 
 const C = {
@@ -864,6 +864,40 @@ function PlayerProfile({ player, team, matches, onClose }) {
           </span>
         )}
       </div>
+
+      {team && (
+        <div style={{ background: C.chalk, borderRadius: 14, padding: 16, border: `1px solid ${C.line}`, marginTop: 14 }}>
+          <div className="f-mono" style={{ fontSize: 10, letterSpacing: 1.5, color: C.ochre, marginBottom: 12, fontWeight: 700 }}>SEASON STATS</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+            <div style={{ textAlign: "center" }}>
+              <Footprints size={18} color={C.soil} style={{ opacity: 0.55, marginBottom: 4 }} />
+              <div className="f-display" style={{ fontSize: 18, color: C.pitch }}>{stats.matchesPlayed}</div>
+              <div className="f-mono" style={{ fontSize: 9, color: C.soil, opacity: 0.5 }}>MATCHES</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <Clock size={18} color={C.soil} style={{ opacity: 0.55, marginBottom: 4 }} />
+              <div className="f-display" style={{ fontSize: 18, color: C.pitch }}>{stats.minutesPlayed}</div>
+              <div className="f-mono" style={{ fontSize: 9, color: C.soil, opacity: 0.5 }}>MINUTES</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <Target size={18} color={C.soil} style={{ opacity: 0.55, marginBottom: 4 }} />
+              <div className="f-display" style={{ fontSize: 18, color: C.pitch }}>{stats.goals}</div>
+              <div className="f-mono" style={{ fontSize: 9, color: C.soil, opacity: 0.5 }}>GOALS</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ display: "flex", justifyContent: "center", gap: 2, marginBottom: 4 }}>
+                <div style={{ width: 10, height: 13, background: "#F4C430", borderRadius: 2 }} />
+                <div style={{ width: 10, height: 13, background: C.rust, borderRadius: 2 }} />
+              </div>
+              <div className="f-display" style={{ fontSize: 18, color: C.pitch }}>{stats.yellowCards}/{stats.redCards}</div>
+              <div className="f-mono" style={{ fontSize: 9, color: C.soil, opacity: 0.5 }}>CARDS</div>
+            </div>
+          </div>
+          <div className="f-body" style={{ fontSize: 10, color: C.soil, opacity: 0.45, marginTop: 12, lineHeight: 1.4 }}>
+            Matches and minutes count only starting lineup appearances — substitute minutes aren't tracked, so they're not estimated.
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -965,7 +999,7 @@ function PitchHalf({ roster, flipped, rowOverrides, onPlayerTap }) {
     );
   }
 
-const rows = { gk: [], def: [], mid: [], fwd: [] };
+  const rows = { gk: [], def: [], mid: [], fwd: [] };
   roster.forEach((p) => rows[(rowOverrides && rowOverrides[p.id]) || positionRow(p.position)].push(p));
   const order = flipped ? ["fwd", "mid", "def", "gk"] : ["gk", "def", "mid", "fwd"];
   const activeRows = order.filter((k) => rows[k].length > 0);
@@ -1126,8 +1160,11 @@ function computePlayerMatchStats(matches, teamId, player) {
   matches.forEach((m) => {
     const sideKey = m.teamAId === teamId ? "teamA" : m.teamBId === teamId ? "teamB" : null;
     if (sideKey && m.lineups && m.lineups[sideKey]) {
-      const appeared = m.lineups[sideKey].some((e) => normalizeLineupEntry(e).id === player.id);
-      if (appeared) matchesPlayed += 1;
+      const started = m.lineups[sideKey].some((e) => {
+        const entry = normalizeLineupEntry(e);
+        return entry.id === player.id && entry.row !== "sub";
+      });
+      if (started) matchesPlayed += 1;
     }
     (m.scorers || []).forEach((s) => {
       if (!s.ownGoal && s.teamId === teamId && s.name.trim().toLowerCase() === nameKey) goals += 1;
