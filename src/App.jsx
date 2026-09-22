@@ -1221,7 +1221,7 @@ function TeamProfile({ team, players, matches, onClose }) {
 
   const selectedPlayer = roster.find((p) => p.id === selectedPlayerId);
   if (selectedPlayer) {
-    return <PlayerProfile player={selectedPlayer} team={team} goals={computePlayerGoals(matches, team.id, selectedPlayer.name)} onClose={() => setSelectedPlayerId(null)} />;
+    return <PlayerProfile player={selectedPlayer} team={team} matches={matches} onClose={() => setSelectedPlayerId(null)} />;
   }
 
   return (
@@ -1388,32 +1388,81 @@ function TeamsTab({ competition, teams, players, matches, selectedTeamId, setSel
   );
 }
 
-function TransfersTab({ transfers, teamName, onTeamTap }) {
+const POSITION_TAG_COLORS = { gk: "#F4A623", def: "#3FA34D", mid: "#2E86DE", fwd: "#D64545" };
+
+function transferSentence(t, teamName) {
+  const from = t.fromTeamId ? teamName(t.fromTeamId) : null;
+  const to = teamName(t.toTeamId);
+  if (t.transferType === "loan") return `${from || "Free agent"} have loaned ${t.playerName} to ${to}`;
+  if (t.transferType === "free" || !from) return `${to} sign ${t.playerName}${from ? ` from ${from}` : ""} on a free transfer`;
+  return `${to} sign ${t.playerName}${from ? ` from ${from}` : ""}`;
+}
+
+function formatTransferDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr + "T00:00:00");
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase();
+}
+
+function TransfersTab({ transfers, teamName, teamBadge, onTeamTap }) {
   const sorted = [...transfers].sort((a, b) => (a.date < b.date ? 1 : -1));
+  const groups = [];
+  sorted.forEach((t) => {
+    const last = groups[groups.length - 1];
+    if (last && last.date === t.date) last.items.push(t);
+    else groups.push({ date: t.date, items: [t] });
+  });
+
+  const TeamBadgeIcon = ({ teamId }) => {
+    const url = teamId && teamBadge(teamId);
+    return url ? (
+      <img src={url} alt="" style={{ width: 30, height: 30, borderRadius: 999, objectFit: "cover", background: "white" }} />
+    ) : (
+      <div style={{ width: 30, height: 30, borderRadius: 999, background: C.line, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Users size={13} color={C.soil} style={{ opacity: 0.5 }} />
+      </div>
+    );
+  };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingBottom: 90 }}>
-      {sorted.map((t) => (
-        <div key={t.id} style={{ background: C.chalk, borderRadius: 14, padding: 14, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", gap: 12 }}>
-          {t.photoUrl ? (
-            <img src={t.photoUrl} alt="" style={{ width: 44, height: 44, borderRadius: 999, objectFit: "cover", flexShrink: 0 }} />
-          ) : (
-            <div style={{ width: 44, height: 44, borderRadius: 999, background: C.sand || "#F2E9D8", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <span className="f-display" style={{ fontSize: 16, color: C.pitch }}>{t.playerName?.[0] || "?"}</span>
-            </div>
-          )}
-          <div style={{ flex: 1 }}>
-            <div className="f-body" style={{ fontSize: 14, fontWeight: 700, color: C.soil }}>{t.playerName}</div>
-            <div className="f-body" style={{ fontSize: 12.5, color: C.soil, opacity: 0.75, marginTop: 2 }}>
-              {t.fromTeamId ? (
-                <span onClick={() => onTeamTap && onTeamTap(t.fromTeamId)} style={{ cursor: onTeamTap ? "pointer" : "default", textDecoration: onTeamTap ? "underline" : "none" }}>{teamName(t.fromTeamId)}</span>
-              ) : (
-                <span style={{ opacity: 0.6 }}>Free agent</span>
-              )}
-              {" → "}
-              <span onClick={() => onTeamTap && onTeamTap(t.toTeamId)} style={{ cursor: onTeamTap ? "pointer" : "default", textDecoration: onTeamTap ? "underline" : "none", fontWeight: 600 }}>{teamName(t.toTeamId)}</span>
-            </div>
-            {t.note && <div className="f-body" style={{ fontSize: 11.5, color: C.soil, opacity: 0.6, marginTop: 4 }}>{t.note}</div>}
-            <div className="f-mono" style={{ fontSize: 10, color: C.soil, opacity: 0.45, marginTop: 4 }}>{t.date}</div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 18, paddingBottom: 90 }}>
+      {groups.map((g) => (
+        <div key={g.date}>
+          <div className="f-mono" style={{ fontSize: 12, letterSpacing: 1, color: C.chalk, fontWeight: 700, marginBottom: 8 }}>{formatTransferDate(g.date)}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {g.items.map((t) => {
+              const rowColor = POSITION_TAG_COLORS[positionRow(t.position)];
+              return (
+                <div key={t.id} style={{ background: C.chalk, borderRadius: 14, padding: 14, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", gap: 10 }}>
+                  {t.photoUrl ? (
+                    <img src={t.photoUrl} alt="" style={{ width: 46, height: 46, borderRadius: 999, objectFit: "cover", flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: 46, height: 46, borderRadius: 999, background: C.sand || "#F2E9D8", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <span className="f-display" style={{ fontSize: 16, color: C.pitch }}>{t.playerName?.[0] || "?"}</span>
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="f-body" style={{ fontSize: 14.5, fontWeight: 700, color: C.soil, marginBottom: 4 }}>{t.playerName}</div>
+                    {t.position && (
+                      <span className="f-mono" style={{ display: "inline-block", background: rowColor || C.line, color: "white", fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4, marginBottom: 5 }}>
+                        {t.position.length <= 3 ? t.position.toUpperCase() : t.position.slice(0, 2).toUpperCase()}
+                      </span>
+                    )}
+                    <div className="f-body" style={{ fontSize: 12.5, color: C.soil, opacity: 0.7, lineHeight: 1.35 }}>{transferSentence(t, teamName)}</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                    <div onClick={() => t.fromTeamId && onTeamTap && onTeamTap(t.fromTeamId)} style={{ cursor: t.fromTeamId && onTeamTap ? "pointer" : "default" }}>
+                      <TeamBadgeIcon teamId={t.fromTeamId} />
+                    </div>
+                    <ArrowLeftRight size={12} color={C.soil} style={{ opacity: 0.4, transform: "rotate(0deg)" }} />
+                    <div onClick={() => onTeamTap && onTeamTap(t.toTeamId)} style={{ cursor: onTeamTap ? "pointer" : "default" }}>
+                      <TeamBadgeIcon teamId={t.toTeamId} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       ))}
@@ -2587,6 +2636,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
   const [transferFromTeamId, setTransferFromTeamId] = useState("");
   const [transferToTeamId, setTransferToTeamId] = useState("");
   const [transferDate, setTransferDate] = useState(new Date().toISOString().slice(0, 10));
+  const [transferType, setTransferType] = useState("signed");
   const [transferNote, setTransferNote] = useState("");
   const [sponsorName, setSponsorName] = useState("");
   const [sponsorUrl, setSponsorUrl] = useState("");
@@ -2669,15 +2719,18 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
     const player = players.find((p) => p.id === transferPlayerId);
     if (!player || !transferToTeamId || !transferDate) return;
     setTransfers([...transfers, {
-      id: uid(), playerId: player.id, playerName: player.name, photoUrl: player.photoUrl || null,
-      fromTeamId: transferFromTeamId || null, toTeamId: transferToTeamId, date: transferDate, note: transferNote.trim(),
+      id: uid(), playerId: player.id, playerName: player.name, photoUrl: player.photoUrl || null, position: player.position || null,
+      transferType, fromTeamId: transferFromTeamId || null, toTeamId: transferToTeamId, date: transferDate, note: transferNote.trim(),
     }]);
-    // Move the player: drop the "from" team (if any) and add the "to" team.
-    setPlayers(players.map((p) => {
-      if (p.id !== player.id) return p;
-      const ids = playerTeamIds(p).filter((tid) => tid !== transferFromTeamId);
-      return { ...p, teamIds: [...new Set([...ids, transferToTeamId])] };
-    }));
+    // A loan is temporary — don't change the player's permanent team record for it.
+    // A signing or free transfer moves them: drop the "from" team, add the "to" team.
+    if (transferType !== "loan") {
+      setPlayers(players.map((p) => {
+        if (p.id !== player.id) return p;
+        const ids = playerTeamIds(p).filter((tid) => tid !== transferFromTeamId);
+        return { ...p, teamIds: [...new Set([...ids, transferToTeamId])] };
+      }));
+    }
     setTransferPlayerQuery(""); setTransferPlayerId(""); setTransferFromTeamId(""); setTransferToTeamId(""); setTransferNote("");
   };
 
@@ -3513,7 +3566,7 @@ export default function AuyoFootballApp() {
                     />
                   );
                 })()}
-                {tab === "transfers" && <TransfersTab transfers={transfers} teamName={teamName} onTeamTap={(teamId) => { setPreviousTab(tab); setSelectedTeamId(teamId); setTab("teams"); }} />}
+                {tab === "transfers" && <TransfersTab transfers={transfers} teamName={teamName} teamBadge={teamBadge} onTeamTap={(teamId) => { setPreviousTab(tab); setSelectedTeamId(teamId); setTab("teams"); }} />}
                 {tab === "news" && <NewsTab news={news} setNews={setNews} likedPosts={likedPosts} toggleLike={toggleLike} />}
                 {tab === "search" && (
                   <SearchTab
@@ -3540,7 +3593,7 @@ export default function AuyoFootballApp() {
                   return (
                     <PlayerProfile
                       player={p} team={t}
-                      goals={t ? computePlayerGoals(matches, t.id, p.name) : 0}
+                      matches={matches}
                       onClose={() => { setSelectedPlayerId(null); setSelectedPlayerTeamId(null); setTab(previousTab); }}
                     />
                   );
