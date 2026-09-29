@@ -100,7 +100,7 @@ const seedNews = () => ([
 ]);
 
 async function loadKey(key) {
-  // Let real errors (permission denied, offline, etc.) propagate — only
+  // Let real errors (permission denied, offline, etc.) propagate 鈥� only
   // return null when the document genuinely doesn't exist yet.
   const res = await storage.get(key);
   if (res && res.value) return JSON.parse(res.value);
@@ -193,13 +193,13 @@ const LEGAL_CONTENT = {
     paragraphs: [
       "Auyo Football is a free, community-built app for following grassroots football competitions in Auyo, Jigawa State and beyond.",
       "Auyo Football is developed and operated by Tafasa LLC. Our goal is straightforward: make it easier for local competitions to reach the people who care about them, and to give small sponsors a genuine way to support the football their communities already love.",
-      "The app is run by volunteers and organizers on the ground — match results, commentary, and news are added by competition administrators in real time, so what you see here is as close to matchday as it gets.",
+      "The app is run by volunteers and organizers on the ground 鈥� match results, commentary, and news are added by competition administrators in real time, so what you see here is as close to matchday as it gets.",
     ],
   },
   contact: {
     label: "Contact Us",
     paragraphs: [
-      "We'd like to hear from you — whether it's a question about a competition, a correction to a result, interest in sponsorship, or feedback on the app itself.",
+      "We'd like to hear from you 鈥� whether it's a question about a competition, a correction to a result, interest in sponsorship, or feedback on the app itself.",
     ],
     fields: [
       { label: "Company", value: "Tafasa LLC" },
@@ -216,7 +216,7 @@ const LEGAL_CONTENT = {
     sections: [
       { heading: null, body: 'This Privacy Policy explains how Tafasa LLC ("we," "us," "our") handles information in connection with the Auyo Football app ("the App"). We\'ve tried to keep this simple, because the App itself is simple: there are no user accounts, and we collect very little information about you.' },
       { heading: "Information We Collect", bullets: [
-        'Comments you post. If you leave a comment on a news post, we store the comment text and the name you choose to enter (you may enter "Anonymous" or any name you like — we do not verify identity).',
+        'Comments you post. If you leave a comment on a news post, we store the comment text and the name you choose to enter (you may enter "Anonymous" or any name you like 鈥� we do not verify identity).',
         "Likes and votes. When you like a news post or vote for Man of the Match, we record that action against your device only, so you don't accidentally vote or like more than once. This is stored locally on your device, not tied to your name or identity.",
         "Technical information. Like most websites and apps, our hosting and infrastructure providers may automatically log basic technical data (such as IP address and browser type) for security and performance purposes.",
       ], body: "We do not require or collect your phone number, email address, date of birth, or any government identification to use the App." },
@@ -264,7 +264,7 @@ function LegalTab({ onClose }) {
           onClick={onClose}
           style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 999, padding: "6px 12px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer" }}
         >
-          <span className="f-body" style={{ fontSize: 12, fontWeight: 700, color: C.chalk }}>✕ Close</span>
+          <span className="f-body" style={{ fontSize: 12, fontWeight: 700, color: C.chalk }}>鉁� Close</span>
         </button>
       </div>
       <div style={{ display: "flex", gap: 6, overflowX: "auto", marginBottom: 16, paddingBottom: 2 }}>
@@ -339,8 +339,8 @@ function StatusPill({ status }) {
 function shareMatch(match, teamName, competitionName) {
   const a = match.teamAName || teamName(match.teamAId);
   const b = match.teamBName || teamName(match.teamBId);
-  const scoreText = match.status === "upcoming" ? `${a} vs ${b} — ${match.date} ${match.time}` : `${a} ${match.scoreA} – ${match.scoreB} ${b} (${match.status === "live" ? "LIVE" : "FT"})`;
-  const text = `⚽ ${competitionName ? competitionName + ": " : ""}${scoreText}\nFollow live on Auyo Football`;
+  const scoreText = match.status === "upcoming" ? `${a} vs ${b} 鈥� ${match.date} ${match.time}` : `${a} ${match.scoreA} 鈥� ${match.scoreB} ${b} (${match.status === "live" ? "LIVE" : "FT"})`;
+  const text = `鈿� ${competitionName ? competitionName + ": " : ""}${scoreText}\nFollow live on Auyo Football`;
   const url = typeof window !== "undefined" ? window.location.origin + window.location.pathname : "";
   if (typeof navigator !== "undefined" && navigator.share) {
     navigator.share({ text, url }).catch(() => {});
@@ -395,7 +395,7 @@ function MatchCard({ match, teamName, teamGroup, getCompetitionName, onOpenMatch
           {match.status === "upcoming" ? (
             <div className="f-mono" style={{ fontSize: 13, color: C.soil, opacity: 0.4, padding: "0 10px" }}>vs</div>
           ) : (
-            <div className="f-display" style={{ fontSize: 26, color: C.pitch, padding: "0 10px", letterSpacing: 1 }}>{match.scoreA}&nbsp;–&nbsp;{match.scoreB}</div>
+            <div className="f-display" style={{ fontSize: 26, color: C.pitch, padding: "0 10px", letterSpacing: 1 }}>{match.scoreA}&nbsp;鈥�&nbsp;{match.scoreB}</div>
           )}
           <div className="f-body" style={{ fontSize: 15, fontWeight: 600, color: C.soil, flex: 1, textAlign: "right" }}>
             {b}
@@ -403,13 +403,13 @@ function MatchCard({ match, teamName, teamGroup, getCompetitionName, onOpenMatch
         </div>
         {match.scorers && match.scorers.length > 0 && (
           <div className="f-body" style={{ fontSize: 11.5, color: C.soil, opacity: 0.6, marginTop: 8, borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
-            ⚽ {[...match.scorers].sort((a, b) => (Number(a.minute) || 0) - (Number(b.minute) || 0)).map((s) => `${s.name} ${s.minute}'${s.ownGoal ? " (OG)" : ""}`).join(", ")}
+            鈿� {[...match.scorers].sort((a, b) => (Number(a.minute) || 0) - (Number(b.minute) || 0)).map((s) => `${s.name} ${s.minute}'${s.ownGoal ? " (OG)" : ""}`).join(", ")}
           </div>
         )}
         <div className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.45, marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 4 }}><MapPin size={11} /> {match.venue} · {match.date}</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}><MapPin size={11} /> {match.venue} 路 {match.date}</span>
           <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {commentary.length > 0 && <span>💬 {commentary.length}</span>}
+            {commentary.length > 0 && <span>馃挰 {commentary.length}</span>}
             <ChevronRight size={13} style={{ opacity: 0.4 }} />
           </span>
         </div>
@@ -572,8 +572,8 @@ function NewsTab({ news, setNews, likedPosts, toggleLike }) {
                 </div>
                 <div className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.45, marginTop: 6, display: "flex", gap: 10 }}>
                   <span>{n.date}</span>
-                  {likes > 0 && <span>❤ {likes}</span>}
-                  {comments.length > 0 && <span>💬 {comments.length}</span>}
+                  {likes > 0 && <span>鉂� {likes}</span>}
+                  {comments.length > 0 && <span>馃挰 {comments.length}</span>}
                 </div>
                 {open && <div className="f-body" style={{ fontSize: 13.5, color: C.soil, opacity: 0.85, marginTop: 10, lineHeight: 1.6, whiteSpace: "pre-line" }}>{n.body}</div>}
             </div>
@@ -584,7 +584,7 @@ function NewsTab({ news, setNews, likedPosts, toggleLike }) {
                   onClick={() => toggleLike(n.id)}
                   style={{ background: liked ? C.rust : "transparent", color: liked ? C.chalk : C.rust, border: `1px solid ${C.rust}`, borderRadius: 999, padding: "6px 14px", fontSize: 12.5, fontWeight: 700, fontFamily: "'Work Sans', sans-serif", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
                 >
-                  ❤ {liked ? "Liked" : "Like"} {likes > 0 ? `(${likes})` : ""}
+                  鉂� {liked ? "Liked" : "Like"} {likes > 0 ? `(${likes})` : ""}
                 </button>
 
                 <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginTop: 14, marginBottom: 8, letterSpacing: 0.5 }}>
@@ -619,7 +619,7 @@ function NewsTab({ news, setNews, likedPosts, toggleLike }) {
                         <div style={{ marginLeft: 18, marginTop: 6, display: "flex", gap: 6 }}>
                           <input
                             style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px" }}
-                            placeholder={`Reply to ${c.name}…`}
+                            placeholder={`Reply to ${c.name}鈥}
                             value={replyDrafts[c.id] || ""}
                             onChange={(e) => setReplyDrafts({ ...replyDrafts, [c.id]: e.target.value })}
                             onKeyDown={(e) => { if (e.key === "Enter") submitComment(n.id, c.id); }}
@@ -640,7 +640,7 @@ function NewsTab({ news, setNews, likedPosts, toggleLike }) {
                   <div style={{ display: "flex", gap: 6 }}>
                     <input
                       style={inputStyle}
-                      placeholder="Write a comment…"
+                      placeholder="Write a comment鈥�"
                       value={commentDrafts[n.id] || ""}
                       onChange={(e) => setCommentDrafts({ ...commentDrafts, [n.id]: e.target.value })}
                       onKeyDown={(e) => { if (e.key === "Enter") submitComment(n.id); }}
@@ -849,11 +849,11 @@ function PlayerProfile({ player, team, matches, onClose }) {
 
         <div style={{ display: "flex", justifyContent: "center", gap: 28, marginBottom: 16 }}>
           <div>
-            <div className="f-display" style={{ fontSize: 22, color: C.pitch }}>{player.age || "—"}</div>
+            <div className="f-display" style={{ fontSize: 22, color: C.pitch }}>{player.age || "鈥�"}</div>
             <div className="f-mono" style={{ fontSize: 9.5, color: C.soil, opacity: 0.5, letterSpacing: 0.5 }}>AGE</div>
           </div>
           <div>
-            <div className="f-display" style={{ fontSize: 22, color: C.pitch }}>{player.number || "—"}</div>
+            <div className="f-display" style={{ fontSize: 22, color: C.pitch }}>{player.number || "鈥�"}</div>
             <div className="f-mono" style={{ fontSize: 9.5, color: C.soil, opacity: 0.5, letterSpacing: 0.5 }}>NUMBER</div>
           </div>
         </div>
@@ -894,7 +894,7 @@ function PlayerProfile({ player, team, matches, onClose }) {
             </div>
           </div>
           <div className="f-body" style={{ fontSize: 10, color: C.soil, opacity: 0.45, marginTop: 12, lineHeight: 1.4 }}>
-            Matches and minutes count only starting lineup appearances — substitute minutes aren't tracked, so they're not estimated.
+            Matches and minutes count only starting lineup appearances 鈥� substitute minutes aren't tracked, so they're not estimated.
           </div>
         </div>
       )}
@@ -912,7 +912,7 @@ function RefereeProfile({ referee, matches, teamName, onClose }) {
     <div style={{ paddingBottom: 90 }}>
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
         <button onClick={onClose} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 999, padding: "6px 12px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer" }}>
-          <span className="f-body" style={{ fontSize: 12, fontWeight: 700, color: C.chalk }}>✕ Close</span>
+          <span className="f-body" style={{ fontSize: 12, fontWeight: 700, color: C.chalk }}>鉁� Close</span>
         </button>
       </div>
       <div style={{ background: C.chalk, borderRadius: 16, padding: 24, textAlign: "center", border: `1px solid ${C.line}`, marginBottom: 14 }}>
@@ -931,7 +931,7 @@ function RefereeProfile({ referee, matches, teamName, onClose }) {
           <div className="f-mono" style={{ fontSize: 10, letterSpacing: 1.5, color: C.ochre, marginBottom: 10, fontWeight: 700 }}>MATCHES OFFICIATED</div>
           {officiated.map((m) => (
             <div key={m.id} className="f-body" style={{ fontSize: 12.5, color: C.soil, padding: "6px 0", borderBottom: `1px solid ${C.line}` }}>
-              {teamName(m.teamAId)} {m.scoreA}–{m.scoreB} {teamName(m.teamBId)}
+              {teamName(m.teamAId)} {m.scoreA}鈥搟m.scoreB} {teamName(m.teamBId)}
               <span className="f-mono" style={{ fontSize: 10, opacity: 0.5, marginLeft: 8 }}>{m.date}</span>
             </div>
           ))}
@@ -986,7 +986,7 @@ function PitchHalf({ roster, flipped, rowOverrides, onPlayerTap }) {
   );
 
   if (hasCoords) {
-    // Players placed by dragging in Admin — position exactly where they
+    // Players placed by dragging in Admin 鈥� position exactly where they
     // were dropped. x/y are 0-100 percentages within this team's own half.
     return (
       <div style={{ position: "relative", flex: 1 }}>
@@ -1127,7 +1127,7 @@ function PitchFormation({ lineupA, lineupB, labelA, labelB, rowOverridesA, rowOv
           {(assistant1Name || assistant2Name) && (
             <div style={{ flex: 1 }}>
               <div className="f-mono" style={{ fontSize: 8.5, color: C.chalk, opacity: 0.5 }}>ASSISTANTS</div>
-              <div className="f-body" style={{ fontSize: 12, color: C.chalk, opacity: 0.85 }}>{[assistant1Name, assistant2Name].filter(Boolean).join(" · ")}</div>
+              <div className="f-body" style={{ fontSize: 12, color: C.chalk, opacity: 0.85 }}>{[assistant1Name, assistant2Name].filter(Boolean).join(" 路 ")}</div>
             </div>
           )}
         </div>
@@ -1150,7 +1150,7 @@ function computePlayerGoals(matches, teamId, playerName) {
 
 // Matches played and cards come straight from real lineup/card records.
 // Minutes played is an estimate (matches x 90) since we don't track exact
-// substitution times — flagged as such wherever it's shown.
+// substitution times 鈥� flagged as such wherever it's shown.
 function computePlayerMatchStats(matches, teamId, player) {
   const nameKey = (player.name || "").trim().toLowerCase();
   let matchesPlayed = 0;
@@ -1182,7 +1182,7 @@ function computePlayerMatchStats(matches, teamId, player) {
 // Matches/minutes are only counted from the starting lineup (row !== "sub"),
 // since that's the only appearance signal the data actually tracks reliably.
 // We don't record the minute a substitute came on, so crediting them any
-// specific minute total would be a guess rather than a real number — those
+// specific minute total would be a guess rather than a real number 鈥� those
 // matches simply aren't counted here rather than being estimated.
 function computePlayerAppearances(matches, teamId, playerId) {
   let matchCount = 0;
@@ -1228,7 +1228,7 @@ function TeamProfile({ team, players, matches, onClose }) {
     <div style={{ paddingBottom: 90 }}>
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
         <button onClick={onClose} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 999, padding: "6px 12px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer" }}>
-          <span className="f-body" style={{ fontSize: 12, fontWeight: 700, color: C.chalk }}>✕ Close</span>
+          <span className="f-body" style={{ fontSize: 12, fontWeight: 700, color: C.chalk }}>鉁� Close</span>
         </button>
       </div>
 
@@ -1299,7 +1299,7 @@ function TeamProfile({ team, players, matches, onClose }) {
             ))}
           </div>
           <div className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.55, marginTop: 10, textAlign: "center" }}>
-            {record.gf} scored · {record.ga} conceded
+            {record.gf} scored 路 {record.ga} conceded
           </div>
         </div>
       )}
@@ -1323,7 +1323,7 @@ function TeamProfile({ team, players, matches, onClose }) {
                   <div className="f-body" style={{ fontSize: 13, fontWeight: 600, color: C.soil }}>{p.name}{p.number ? `  #${p.number}` : ""}</div>
                   {p.position && <div className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.5 }}>{p.position}</div>}
                 </div>
-                {goals > 0 && <div className="f-mono" style={{ fontSize: 11.5, color: C.pitch, fontWeight: 700 }}>⚽ {goals}</div>}
+                {goals > 0 && <div className="f-mono" style={{ fontSize: 11.5, color: C.pitch, fontWeight: 700 }}>鈿� {goals}</div>}
                 <ChevronRight size={14} color={C.soil} style={{ opacity: 0.35 }} />
               </div>
             );
@@ -1494,7 +1494,7 @@ function SearchTab({ teams, players, competitions, matches, referees, teamName, 
     <div style={{ paddingBottom: 90 }}>
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
         <button onClick={onClose} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 999, padding: "6px 12px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer" }}>
-          <span className="f-body" style={{ fontSize: 12, fontWeight: 700, color: C.chalk }}>✕ Close</span>
+          <span className="f-body" style={{ fontSize: 12, fontWeight: 700, color: C.chalk }}>鉁� Close</span>
         </button>
       </div>
 
@@ -1503,7 +1503,7 @@ function SearchTab({ teams, players, competitions, matches, referees, teamName, 
         <input
           autoFocus
           style={{ ...inputStyle, paddingLeft: 36 }}
-          placeholder="Search players, teams, competitions, matches…"
+          placeholder="Search players, teams, competitions, matches鈥�"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -1670,7 +1670,7 @@ function RankingsTab({ matches, players, teams, teamName }) {
     <div style={{ paddingBottom: 90 }}>
       <RankingList title="Goalscorers" rows={scorers} valueKey="goals" players={players} teams={teams} emptyText="No goals recorded yet in this competition." />
       <RankingList title="Assists" rows={assists} valueKey="assists" players={players} teams={teams} emptyText="No assists recorded yet in this competition." />
-      <RankingList title="Best Goalkeeper" rows={keepers} valueKey="cleanSheets" players={players} teams={teams} emptyText="No goalkeeper data yet — set a lineup's GK row and finish a match to see this." />
+      <RankingList title="Best Goalkeeper" rows={keepers} valueKey="cleanSheets" players={players} teams={teams} emptyText="No goalkeeper data yet 鈥� set a lineup's GK row and finish a match to see this." />
     </div>
   );
 }
@@ -1712,7 +1712,7 @@ function MatchDetail({ match, teamName, players, referees, votedMatches, onVote,
     <div style={{ paddingBottom: 90 }}>
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
         <button onClick={onClose} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 999, padding: "6px 12px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer" }}>
-          <span className="f-body" style={{ fontSize: 12, fontWeight: 700, color: C.chalk }}>✕ Close</span>
+          <span className="f-body" style={{ fontSize: 12, fontWeight: 700, color: C.chalk }}>鉁� Close</span>
         </button>
       </div>
 
@@ -1734,7 +1734,7 @@ function MatchDetail({ match, teamName, players, referees, votedMatches, onVote,
           {match.status === "upcoming" ? (
             <div className="f-mono" style={{ fontSize: 13, color: C.soil, opacity: 0.4, padding: "0 10px" }}>vs</div>
           ) : (
-            <div className="f-display" style={{ fontSize: 28, color: C.pitch, padding: "0 10px", letterSpacing: 1 }}>{match.scoreA}&nbsp;–&nbsp;{match.scoreB}</div>
+            <div className="f-display" style={{ fontSize: 28, color: C.pitch, padding: "0 10px", letterSpacing: 1 }}>{match.scoreA}&nbsp;鈥�&nbsp;{match.scoreB}</div>
           )}
           <div
             onClick={() => onTeamTap && match.teamBId && onTeamTap(match.teamBId)}
@@ -1745,7 +1745,7 @@ function MatchDetail({ match, teamName, players, referees, votedMatches, onVote,
           </div>
         </div>
         <div className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.45, marginTop: 10, display: "flex", alignItems: "center", gap: 4 }}>
-          <MapPin size={11} /> {match.venue} · {match.date}
+          <MapPin size={11} /> {match.venue} 路 {match.date}
         </div>
       </div>
 
@@ -1808,7 +1808,7 @@ function MatchDetail({ match, teamName, players, referees, votedMatches, onVote,
                     {isHome && info}
                     <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
                       {!isHome && <span className="f-mono" style={{ fontSize: 13, color: "#4ADE80", fontWeight: 700 }}>{s.minute}'</span>}
-                      <span style={{ fontSize: 15 }}>{s.ownGoal ? "🔴" : "⚽"}</span>
+                      <span style={{ fontSize: 15 }}>{s.ownGoal ? "馃敶" : "鈿�"}</span>
                       {isHome && <span className="f-mono" style={{ fontSize: 13, color: "#4ADE80", fontWeight: 700 }}>{s.minute}'</span>}
                     </div>
                     {!isHome && info}
@@ -1822,7 +1822,7 @@ function MatchDetail({ match, teamName, players, referees, votedMatches, onVote,
             <div className="f-mono" style={{ fontSize: 10, letterSpacing: 1, color: C.ochre, marginBottom: 8, fontWeight: 700 }}>CARDS</div>
             {cards.length === 0 && <div className="f-body" style={{ fontSize: 12, color: C.soil, opacity: 0.5 }}>No cards recorded.</div>}
             {cards.map((c) => (
-              <div key={c.id} className="f-body" style={{ fontSize: 12.5, color: C.soil, padding: "3px 0" }}>{c.type === "yellow" ? "🟨" : "🟥"} {c.name}</div>
+              <div key={c.id} className="f-body" style={{ fontSize: 12.5, color: C.soil, padding: "3px 0" }}>{c.type === "yellow" ? "馃煥" : "馃煡"} {c.name}</div>
             ))}
           </div>
 
@@ -1846,13 +1846,13 @@ function MatchDetail({ match, teamName, players, referees, votedMatches, onVote,
                       {hasVoted && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pct}%`, background: "rgba(198,138,61,0.18)", zIndex: 0 }} />}
                       <div style={{ position: "relative", zIndex: 1, display: "flex", justifyContent: "space-between" }}>
                         <span className="f-body" style={{ fontSize: 13, color: C.soil, fontWeight: 600 }}>{cand.name}</span>
-                        {hasVoted && <span className="f-mono" style={{ fontSize: 11, color: C.soil, opacity: 0.6 }}>{votes} · {pct}%</span>}
+                        {hasVoted && <span className="f-mono" style={{ fontSize: 11, color: C.soil, opacity: 0.6 }}>{votes} 路 {pct}%</span>}
                       </div>
                     </button>
                   );
                 })}
               </div>
-              {!hasVoted && <div className="f-body" style={{ fontSize: 11, color: C.soil, opacity: 0.5, marginTop: 6 }}>Tap a name to vote — one vote per device.</div>}
+              {!hasVoted && <div className="f-body" style={{ fontSize: 11, color: C.soil, opacity: 0.5, marginTop: 6 }}>Tap a name to vote 鈥� one vote per device.</div>}
             </div>
           )}
         </div>
@@ -1889,7 +1889,7 @@ function CompetitionProfile({ competition, teams, matches, players, teamName, te
     <div style={{ paddingBottom: 90 }}>
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
         <button onClick={onClose} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 999, padding: "6px 12px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer" }}>
-          <span className="f-body" style={{ fontSize: 12, fontWeight: 700, color: C.chalk }}>✕ Close</span>
+          <span className="f-body" style={{ fontSize: 12, fontWeight: 700, color: C.chalk }}>鉁� Close</span>
         </button>
       </div>
 
@@ -1987,7 +1987,7 @@ function MatchManagementRow({ match, teamName_, updateMatch, removeMatch, player
           {match.teamAName || teamName_(match.teamAId)} vs {match.teamBName || teamName_(match.teamBId)}
         </div>
         <div className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.5, marginTop: 2 }}>
-          {match.date} · {match.status === "upcoming" ? "vs" : `${match.scoreA} – ${match.scoreB}`} · {match.status.toUpperCase()}
+          {match.date} 路 {match.status === "upcoming" ? "vs" : `${match.scoreA} 鈥� ${match.scoreB}`} 路 {match.status.toUpperCase()}
         </div>
       </div>
 
@@ -1995,7 +1995,7 @@ function MatchManagementRow({ match, teamName_, updateMatch, removeMatch, player
         <div style={{ marginTop: 10 }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
             <input type="number" style={{ ...inputStyle, width: 55 }} value={match.scoreA} onChange={(e) => updateMatch(match.id, { scoreA: Number(e.target.value) })} />
-            <span className="f-mono" style={{ opacity: 0.5 }}>–</span>
+            <span className="f-mono" style={{ opacity: 0.5 }}>鈥�</span>
             <input type="number" style={{ ...inputStyle, width: 55 }} value={match.scoreB} onChange={(e) => updateMatch(match.id, { scoreB: Number(e.target.value) })} />
             <select style={{ ...inputStyle, flex: 1 }} value={match.status} onChange={(e) => updateMatch(match.id, { status: e.target.value })}>
               <option value="upcoming">Upcoming</option>
@@ -2042,7 +2042,7 @@ function ScorerRow({ match, updateMatch }) {
       {[...(match.scorers || [])].sort((a, b) => (Number(a.minute) || 0) - (Number(b.minute) || 0)).map((s) => (
         <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5, padding: "4px 0" }} className="f-body">
           <span style={{ color: C.soil }}>
-            {s.minute}' — {s.name}{s.ownGoal ? " (Own goal)" : s.assistName ? ` (assist: ${s.assistName})` : ""}
+            {s.minute}' 鈥� {s.name}{s.ownGoal ? " (Own goal)" : s.assistName ? ` (assist: ${s.assistName})` : ""}
           </span>
           <button onClick={() => removeScorer(s.id)} style={{ background: "none", border: "none", cursor: "pointer" }}><Trash2 size={12} color={C.rust} /></button>
         </div>
@@ -2084,7 +2084,7 @@ function CardsRow({ match, updateMatch }) {
       <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginBottom: 6 }}>CARDS</div>
       {cards.map((c) => (
         <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5, padding: "4px 0" }} className="f-body">
-          <span style={{ color: C.soil }}>{c.type === "yellow" ? "🟨" : "🟥"} {c.name}</span>
+          <span style={{ color: C.soil }}>{c.type === "yellow" ? "馃煥" : "馃煡"} {c.name}</span>
           <button onClick={() => removeCard(c.id)} style={{ background: "none", border: "none", cursor: "pointer" }}><Trash2 size={12} color={C.rust} /></button>
         </div>
       ))}
@@ -2095,8 +2095,8 @@ function CardsRow({ match, updateMatch }) {
           <option value={match.teamBId}>Away</option>
         </select>
         <select style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", width: 60 }} value={type} onChange={(e) => setType(e.target.value)}>
-          <option value="yellow">🟨</option>
-          <option value="red">🟥</option>
+          <option value="yellow">馃煥</option>
+          <option value="red">馃煡</option>
         </select>
         <button onClick={addCard} style={{ ...btnStyle(C.pitch, C.chalk), padding: "7px 9px" }}><Plus size={13} /></button>
       </div>
@@ -2165,7 +2165,7 @@ function LineupRow({ match, updateMatch, players }) {
 
   return (
     <div style={{ marginTop: 8, borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
-      <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginBottom: 6 }}>LINEUPS — set each player as Starting or Substitute. Use the line dropdown for anyone playing out of their usual position.</div>
+      <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginBottom: 6 }}>LINEUPS 鈥� set each player as Starting or Substitute. Use the line dropdown for anyone playing out of their usual position.</div>
       <div style={{ display: "flex", gap: 10 }}>
         <Side label="HOME" roster={teamARoster} entries={entriesA} side="A" />
         <Side label="AWAY" roster={teamBRoster} entries={entriesB} side="B" />
@@ -2193,7 +2193,7 @@ function RefereeAssignmentRow({ match, updateMatch, referees }) {
           {referees.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
         </select>
       </Field>
-      {referees.length === 0 && <div className="f-body" style={{ fontSize: 11, color: C.soil, opacity: 0.5, marginBottom: 8 }}>No referees added yet — add one in the REFEREES section above.</div>}
+      {referees.length === 0 && <div className="f-body" style={{ fontSize: 11, color: C.soil, opacity: 0.5, marginBottom: 8 }}>No referees added yet 鈥� add one in the REFEREES section above.</div>}
       <div style={{ display: "flex", gap: 6 }}>
         <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px" }} placeholder="Assistant referee 1" value={assistant1} onChange={(e) => setAssistant1(e.target.value)} />
         <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px" }} placeholder="Assistant referee 2" value={assistant2} onChange={(e) => setAssistant2(e.target.value)} />
@@ -2204,14 +2204,14 @@ function RefereeAssignmentRow({ match, updateMatch, referees }) {
 }
 
 const COMMENTARY_PRESETS = [
-  { label: "⚽ Kickoff", text: "Kickoff! The match is underway." },
-  { label: "⚽ Goal", text: "GOAL!" },
-  { label: "🟨 Yellow", text: "Yellow card shown." },
-  { label: "🟥 Red", text: "Red card! Down to 10 men." },
-  { label: "📐 Corner", text: "Corner kick." },
-  { label: "🔄 Sub", text: "Substitution." },
-  { label: "⏱ Half-time", text: "Half-time whistle blows." },
-  { label: "🏁 Full-time", text: "Full-time! The referee blows the final whistle." },
+  { label: "鈿� Kickoff", text: "Kickoff! The match is underway." },
+  { label: "鈿� Goal", text: "GOAL!" },
+  { label: "馃煥 Yellow", text: "Yellow card shown." },
+  { label: "馃煡 Red", text: "Red card! Down to 10 men." },
+  { label: "馃搻 Corner", text: "Corner kick." },
+  { label: "馃攧 Sub", text: "Substitution." },
+  { label: "鈴� Half-time", text: "Half-time whistle blows." },
+  { label: "馃弫 Full-time", text: "Full-time! The referee blows the final whistle." },
 ];
 
 function estimateMinute(match) {
@@ -2273,7 +2273,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
       updateTeam(team.id, { badgeUrl: url });
     } catch (err) {
       console.error("Badge upload failed", err);
-      alert("Couldn't upload badge — check your connection and Firebase Storage rules.");
+      alert("Couldn't upload badge 鈥� check your connection and Firebase Storage rules.");
     } finally {
       setBadgeUploading(false);
     }
@@ -2289,7 +2289,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
       updateTeam(team.id, { managerPhotoUrl: url });
     } catch (err) {
       console.error("Manager photo upload failed", err);
-      alert("Couldn't upload photo — check your connection and Firebase Storage rules.");
+      alert("Couldn't upload photo 鈥� check your connection and Firebase Storage rules.");
     } finally {
       setManagerPhotoUploading(false);
     }
@@ -2305,7 +2305,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
       updateTeam(team.id, { headCoachPhotoUrl: url });
     } catch (err) {
       console.error("Head coach photo upload failed", err);
-      alert("Couldn't upload photo — check your connection and Firebase Storage rules.");
+      alert("Couldn't upload photo 鈥� check your connection and Firebase Storage rules.");
     } finally {
       setHeadCoachPhotoUploading(false);
     }
@@ -2320,7 +2320,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
       setPlayerPhotoUrl(url);
     } catch (err) {
       console.error("Player photo upload failed", err);
-      alert("Couldn't upload photo — check your connection and Firebase Storage rules.");
+      alert("Couldn't upload photo 鈥� check your connection and Firebase Storage rules.");
     } finally {
       setPlayerPhotoUploading(false);
     }
@@ -2367,7 +2367,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
                     const comp = competitions.find((c) => c.id === e.competitionId);
                     return (
                       <div key={e.competitionId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5 }} className="f-body">
-                        <span style={{ color: C.soil }}>{comp?.name || "—"}{e.group ? ` (Group ${e.group})` : ""}</span>
+                        <span style={{ color: C.soil }}>{comp?.name || "鈥�"}{e.group ? ` (Group ${e.group})` : ""}</span>
                         <button onClick={() => removeParticipation(e.competitionId)} style={{ background: "none", border: "none", cursor: "pointer" }}><Trash2 size={12} color={C.rust} /></button>
                       </div>
                     );
@@ -2376,7 +2376,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
               )}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 <select style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px", flex: 1, minWidth: 120 }} value={assignCompId} onChange={(e) => setAssignCompId(e.target.value)}>
-                  <option value="">Add to a competition…</option>
+                  <option value="">Add to a competition鈥�</option>
                   {competitions.filter((c) => !teamComps.some((e) => e.competitionId === c.id)).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
                 {assignCompId && competitions.find((c) => c.id === assignCompId)?.hasGroups && (
@@ -2391,7 +2391,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
           )}
           <Field label="Badge / logo">
             <input type="file" accept="image/*" onChange={handleBadgeSelect} style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px" }} />
-            {badgeUploading && <div className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.6, marginTop: 4 }}>Uploading…</div>}
+            {badgeUploading && <div className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.6, marginTop: 4 }}>Uploading鈥�</div>}
           </Field>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
             <input style={{ ...inputStyle, fontSize: 12.5, padding: "7px 9px" }} placeholder="Home venue" value={venue} onChange={(e) => setVenue(e.target.value)} />
@@ -2402,7 +2402,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
                 {managerPhotoUrl && <img src={managerPhotoUrl} alt="" style={{ width: 44, height: 44, borderRadius: 999, objectFit: "cover" }} />}
                 <input type="file" accept="image/*" onChange={handleManagerPhotoSelect} style={{ ...inputStyle, fontSize: 11, padding: "5px 8px", flex: 1 }} />
               </div>
-              {managerPhotoUploading && <div className="f-mono" style={{ fontSize: 10, color: C.soil, opacity: 0.6, marginTop: 2 }}>Uploading…</div>}
+              {managerPhotoUploading && <div className="f-mono" style={{ fontSize: 10, color: C.soil, opacity: 0.6, marginTop: 2 }}>Uploading鈥�</div>}
             </div>
 
             <div>
@@ -2411,7 +2411,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
                 {headCoachPhotoUrl && <img src={headCoachPhotoUrl} alt="" style={{ width: 44, height: 44, borderRadius: 999, objectFit: "cover" }} />}
                 <input type="file" accept="image/*" onChange={handleHeadCoachPhotoSelect} style={{ ...inputStyle, fontSize: 11, padding: "5px 8px", flex: 1 }} />
               </div>
-              {headCoachPhotoUploading && <div className="f-mono" style={{ fontSize: 10, color: C.soil, opacity: 0.6, marginTop: 2 }}>Uploading…</div>}
+              {headCoachPhotoUploading && <div className="f-mono" style={{ fontSize: 10, color: C.soil, opacity: 0.6, marginTop: 2 }}>Uploading鈥�</div>}
             </div>
 
             <button onClick={saveDetails} style={{ ...btnStyle(C.pitch, C.chalk), padding: "7px 10px", fontSize: 12, alignSelf: "flex-start" }}>Save details</button>
@@ -2425,7 +2425,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
             return (
               <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0" }} className="f-body">
                 <div>
-                  <span style={{ fontSize: 12.5, color: C.soil }}>{p.name}{p.number ? ` #${p.number}` : ""}{p.position ? ` · ${p.position}` : ""}</span>
+                  <span style={{ fontSize: 12.5, color: C.soil }}>{p.name}{p.number ? ` #${p.number}` : ""}{p.position ? ` 路 ${p.position}` : ""}</span>
                   {otherTeamNames.length > 0 && <div className="f-mono" style={{ fontSize: 10, color: C.soil, opacity: 0.5 }}>Also: {otherTeamNames.join(", ")}</div>}
                 </div>
                 <button onClick={() => removePlayer(p.id)} style={{ background: "none", border: "none", cursor: "pointer" }}><Trash2 size={12} color={C.rust} /></button>
@@ -2454,7 +2454,7 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
           )}
           <input
             style={{ ...inputStyle, fontSize: 12, padding: "7px 9px", marginTop: 6 }}
-            placeholder="Search to add an existing player (already on another team)…"
+            placeholder="Search to add an existing player (already on another team)鈥�"
             value={existingPlayerQuery}
             onChange={(e) => setExistingPlayerQuery(e.target.value)}
           />
@@ -2472,10 +2472,10 @@ function TeamManagementRow({ team, updateTeam, removeTeam, players, setPlayers, 
           </div>
           <div style={{ marginTop: 6 }}>
             <input type="file" accept="image/*" onChange={handlePlayerPhotoSelect} style={{ ...inputStyle, fontSize: 12, padding: "6px 9px" }} />
-            {playerPhotoUploading && <div className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.6, marginTop: 4 }}>Uploading…</div>}
+            {playerPhotoUploading && <div className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.6, marginTop: 4 }}>Uploading鈥�</div>}
           </div>
           <button onClick={addPlayer} disabled={playerPhotoUploading} style={{ ...btnStyle(C.ochre, C.chalk), padding: "7px 9px", fontSize: 12, marginTop: 8, opacity: playerPhotoUploading ? 0.5 : 1 }}>
-            <Plus size={13} /> {playerPhotoUploading ? "Uploading…" : "Add player"}
+            <Plus size={13} /> {playerPhotoUploading ? "Uploading鈥�" : "Add player"}
           </button>
         </div>
       )}
@@ -2552,7 +2552,7 @@ function MotmRow({ match, updateMatch }) {
       <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginBottom: 6 }}>MAN OF THE MATCH CANDIDATES</div>
       {motm.candidates.map((c) => (
         <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5, padding: "4px 0" }} className="f-body">
-          <span style={{ color: C.soil }}>{c.name} — {(motm.votes || {})[c.id] || 0} votes</span>
+          <span style={{ color: C.soil }}>{c.name} 鈥� {(motm.votes || {})[c.id] || 0} votes</span>
           <button onClick={() => removeCandidate(c.id)} style={{ background: "none", border: "none", cursor: "pointer" }}><Trash2 size={12} color={C.rust} /></button>
         </div>
       ))}
@@ -2579,7 +2579,7 @@ function NewsModerationRow({ post, news, setNews, removeNews }) {
         <div onClick={() => setExpanded(!expanded)} style={{ cursor: "pointer", flex: 1 }}>
           <span className="f-body" style={{ fontSize: 13, color: C.soil }}>{post.title}</span>
           <span className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.5, marginLeft: 8 }}>
-            ❤ {post.likes || 0} · 💬 {comments.length}
+            鉂� {post.likes || 0} 路 馃挰 {comments.length}
           </span>
         </div>
         <button onClick={() => removeNews(post.id)} style={{ background: "none", border: "none", cursor: "pointer" }}><Trash2 size={14} color={C.rust} /></button>
@@ -2662,7 +2662,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
   const competitionTeams = teams.filter((t) => teamInCompetition(t, activeCompetitionId));
   const competitionMatches = matches.filter((m) => m.competitionId === activeCompetitionId);
   const friendlyMatches = matches.filter((m) => !m.competitionId);
-  const teamName_ = (id) => teams.find((t) => t.id === id)?.name || "—";
+  const teamName_ = (id) => teams.find((t) => t.id === id)?.name || "鈥�";
 
   const addCompetition = () => {
     if (!compName.trim()) return;
@@ -2674,7 +2674,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
   const removeCompetition = (id) => {
     if (competitions.length <= 1) return;
     setCompetitions(competitions.filter((c) => c.id !== id));
-    // Teams can belong to multiple competitions — only detach this one,
+    // Teams can belong to multiple competitions 鈥� only detach this one,
     // don't delete the team itself.
     setTeams(teams.map((t) => ({ ...t, competitions: teamCompetitionEntries(t).filter((e) => e.competitionId !== id) })));
     setMatches(matches.filter((m) => m.competitionId !== id));
@@ -2709,7 +2709,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
       setRefereePhotoUrl(url);
     } catch (err) {
       console.error("Referee photo upload failed", err);
-      alert("Couldn't upload photo — check your connection and Firebase Storage rules.");
+      alert("Couldn't upload photo 鈥� check your connection and Firebase Storage rules.");
     } finally {
       setRefereePhotoUploading(false);
     }
@@ -2722,7 +2722,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
       id: uid(), playerId: player.id, playerName: player.name, photoUrl: player.photoUrl || null, position: player.position || null,
       transferType, fromTeamId: transferFromTeamId || null, toTeamId: transferToTeamId, date: transferDate, note: transferNote.trim(),
     }]);
-    // A loan is temporary — don't change the player's permanent team record for it.
+    // A loan is temporary 鈥� don't change the player's permanent team record for it.
     // A signing or free transfer moves them: drop the "from" team, add the "to" team.
     if (transferType !== "loan") {
       setPlayers(players.map((p) => {
@@ -2767,7 +2767,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
       setNewsImageUrl(url);
     } catch (err) {
       console.error("Image upload failed", err);
-      alert("Couldn't upload image — check your connection and Firebase Storage rules.");
+      alert("Couldn't upload image 鈥� check your connection and Firebase Storage rules.");
     } finally {
       setImageUploading(false);
     }
@@ -2788,7 +2788,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
       setSponsorLogoUrl(url);
     } catch (err) {
       console.error("Logo upload failed", err);
-      alert("Couldn't upload logo — check your connection and Firebase Storage rules.");
+      alert("Couldn't upload logo 鈥� check your connection and Firebase Storage rules.");
     } finally {
       setSponsorLogoUploading(false);
     }
@@ -2809,7 +2809,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
       setAdImageUrl(url);
     } catch (err) {
       console.error("Ad image upload failed", err);
-      alert("Couldn't upload image — check your connection and Firebase Storage rules.");
+      alert("Couldn't upload image 鈥� check your connection and Firebase Storage rules.");
     } finally {
       setAdImageUploading(false);
     }
@@ -2823,7 +2823,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
           {competitions.map((c) => (
             <div key={c.id} onClick={() => { setActiveCompetitionId(c.id); setShowMatches(false); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.line}`, cursor: "pointer" }}>
               <div>
-                <div className="f-body" style={{ fontSize: 13.5, color: C.soil, fontWeight: c.id === activeCompetitionId ? 700 : 500 }}>{c.name}{c.id === activeCompetitionId ? "  ✓" : ""}</div>
+                <div className="f-body" style={{ fontSize: 13.5, color: C.soil, fontWeight: c.id === activeCompetitionId ? 700 : 500 }}>{c.name}{c.id === activeCompetitionId ? "  鉁�" : ""}</div>
                 {c.subtitle && <div className="f-mono" style={{ fontSize: 10, color: C.soil, opacity: 0.5 }}>{c.subtitle}</div>}
               </div>
               {competitions.length > 1 && (
@@ -2846,7 +2846,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
         <div className="f-mono" style={{ fontSize: 11, letterSpacing: 2, color: C.ochre, marginBottom: 10, fontWeight: 700 }}>TEAM DATABASE</div>
         <div style={{ background: C.chalk, borderRadius: 14, padding: 14, border: `1px solid ${C.line}` }}>
           <div className="f-body" style={{ fontSize: 11.5, color: C.soil, opacity: 0.6, marginBottom: 10, lineHeight: 1.4 }}>
-            Add teams and players here without tying them to a competition — useful for building up your roster of teams ahead of time. Assign a team to a specific competition (and group) whenever it's ready to compete.
+            Add teams and players here without tying them to a competition 鈥� useful for building up your roster of teams ahead of time. Assign a team to a specific competition (and group) whenever it's ready to compete.
           </div>
           <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
             <input style={inputStyle} placeholder="New team name" value={globalTeamName} onChange={(e) => setGlobalTeamName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addGlobalTeam(); }} />
@@ -2855,7 +2855,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
           {teams.map((t) => (
             <TeamManagementRow key={t.id} team={t} updateTeam={updateTeam} removeTeam={removeTeam} players={players} setPlayers={setPlayers} competitions={competitions} teams={teams} />
           ))}
-          {teams.length === 0 && <div className="f-body" style={{ fontSize: 12, color: C.soil, opacity: 0.5, marginTop: 8 }}>No teams yet — add one above.</div>}
+          {teams.length === 0 && <div className="f-body" style={{ fontSize: 12, color: C.soil, opacity: 0.5, marginTop: 8 }}>No teams yet 鈥� add one above.</div>}
         </div>
       </div>
 
@@ -2863,7 +2863,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
         <div className="f-mono" style={{ fontSize: 11, letterSpacing: 2, color: C.ochre, marginBottom: 10, fontWeight: 700 }}>REFEREES</div>
         <div style={{ background: C.chalk, borderRadius: 14, padding: 14, border: `1px solid ${C.line}` }}>
           <div className="f-body" style={{ fontSize: 11.5, color: C.soil, opacity: 0.6, marginBottom: 10, lineHeight: 1.4 }}>
-            Add match officials here — once added, you can assign a referee to any match from that match's MATCH OFFICIALS section.
+            Add match officials here 鈥� once added, you can assign a referee to any match from that match's MATCH OFFICIALS section.
           </div>
           {referees.map((r) => (
             <div key={r.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: `1px solid ${C.line}` }}>
@@ -2885,15 +2885,15 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
             <Field label="Referee name"><input style={inputStyle} placeholder="e.g. Musa Ibrahim" value={refereeName} onChange={(e) => setRefereeName(e.target.value)} /></Field>
             <Field label="Photo (optional)">
               <input type="file" accept="image/*" onChange={handleRefereePhotoSelect} style={{ ...inputStyle, padding: "7px 9px" }} />
-              {refereePhotoUploading && <div className="f-mono" style={{ fontSize: 11, color: C.soil, opacity: 0.6, marginTop: 6 }}>Uploading…</div>}
+              {refereePhotoUploading && <div className="f-mono" style={{ fontSize: 11, color: C.soil, opacity: 0.6, marginTop: 6 }}>Uploading鈥�</div>}
               {refereePhotoUrl && !refereePhotoUploading && (
                 <div style={{ marginTop: 8, position: "relative", display: "inline-block" }}>
                   <img src={refereePhotoUrl} alt="" style={{ width: 50, height: 50, borderRadius: 999, objectFit: "cover", border: `1px solid ${C.line}` }} />
-                  <button onClick={() => setRefereePhotoUrl("")} style={{ position: "absolute", top: -6, right: -6, background: C.rust, border: "none", borderRadius: 999, width: 18, height: 18, color: C.chalk, cursor: "pointer", fontSize: 11, lineHeight: 1 }}>×</button>
+                  <button onClick={() => setRefereePhotoUrl("")} style={{ position: "absolute", top: -6, right: -6, background: C.rust, border: "none", borderRadius: 999, width: 18, height: 18, color: C.chalk, cursor: "pointer", fontSize: 11, lineHeight: 1 }}>脳</button>
                 </div>
               )}
             </Field>
-            <button onClick={addReferee} disabled={refereePhotoUploading} style={{ ...btnStyle(C.ochre, C.chalk), opacity: refereePhotoUploading ? 0.5 : 1 }}><Plus size={14} /> {refereePhotoUploading ? "Uploading…" : "Add referee"}</button>
+            <button onClick={addReferee} disabled={refereePhotoUploading} style={{ ...btnStyle(C.ochre, C.chalk), opacity: refereePhotoUploading ? 0.5 : 1 }}><Plus size={14} /> {refereePhotoUploading ? "Uploading鈥�" : "Add referee"}</button>
           </div>
         </div>
       </div>
@@ -2904,7 +2904,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
           <Field label="Player">
             <input
               style={inputStyle}
-              placeholder="Search player by name…"
+              placeholder="Search player by name鈥�"
               value={transferPlayerId ? players.find((p) => p.id === transferPlayerId)?.name || "" : transferPlayerQuery}
               onChange={(e) => { setTransferPlayerQuery(e.target.value); setTransferPlayerId(""); setTransferFromTeamId(""); }}
             />
@@ -2951,7 +2951,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
           {[...transfers].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 8).map((t) => (
             <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderTop: `1px solid ${C.line}` }}>
               <span className="f-body" style={{ fontSize: 12.5, color: C.soil }}>
-                {t.playerName}: {t.fromTeamId ? (teams.find((tm) => tm.id === t.fromTeamId)?.name || "—") : "Free agent"} → {teams.find((tm) => tm.id === t.toTeamId)?.name || "—"}
+                {t.playerName}: {t.fromTeamId ? (teams.find((tm) => tm.id === t.fromTeamId)?.name || "鈥�") : "Free agent"} 鈫� {teams.find((tm) => tm.id === t.toTeamId)?.name || "鈥�"}
               </span>
               <button onClick={() => setTransfers(transfers.filter((x) => x.id !== t.id))} style={{ background: "none", border: "none", cursor: "pointer" }}><Trash2 size={12} color={C.rust} /></button>
             </div>
@@ -3027,20 +3027,20 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
                     </Field>
                   ) : (
                     <div className="f-body" style={{ fontSize: 11.5, color: C.soil, opacity: 0.6, marginBottom: 12, lineHeight: 1.4 }}>
-                      Knockout stage — pick any two teams from either group (e.g. Group A winner vs Group B runner-up).
+                      Knockout stage 鈥� pick any two teams from either group (e.g. Group A winner vs Group B runner-up).
                     </div>
                   )}
                 </>
               )}
               {isFriendly && (
                 <div className="f-body" style={{ fontSize: 11.5, color: C.soil, opacity: 0.6, marginBottom: 12, lineHeight: 1.4 }}>
-                  Friendly match — pick any two teams from any competition.
+                  Friendly match 鈥� pick any two teams from any competition.
                 </div>
               )}
               <Field label="Home team">
                 {isFriendly && (
                   <label className="f-body" style={{ fontSize: 11, color: C.soil, opacity: 0.7, display: "flex", alignItems: "center", gap: 5, marginBottom: 5 }}>
-                    <input type="checkbox" checked={mACustom} onChange={(e) => { setMACustom(e.target.checked); setMA(""); setMAName(""); }} /> Not a registered team — type the name
+                    <input type="checkbox" checked={mACustom} onChange={(e) => { setMACustom(e.target.checked); setMA(""); setMAName(""); }} /> Not a registered team 鈥� type the name
                   </label>
                 )}
                 {mACustom ? (
@@ -3062,7 +3062,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
               <Field label="Away team">
                 {isFriendly && (
                   <label className="f-body" style={{ fontSize: 11, color: C.soil, opacity: 0.7, display: "flex", alignItems: "center", gap: 5, marginBottom: 5 }}>
-                    <input type="checkbox" checked={mBCustom} onChange={(e) => { setMBCustom(e.target.checked); setMB(""); setMBName(""); }} /> Not a registered team — type the name
+                    <input type="checkbox" checked={mBCustom} onChange={(e) => { setMBCustom(e.target.checked); setMB(""); setMBName(""); }} /> Not a registered team 鈥� type the name
                   </label>
                 )}
                 {mBCustom ? (
@@ -3124,15 +3124,15 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
           <Field label="Title"><input style={inputStyle} value={newsTitle} onChange={(e) => setNewsTitle(e.target.value)} /></Field>
           <Field label="Photo (optional)">
             <input type="file" accept="image/*" onChange={handleImageSelect} style={{ ...inputStyle, padding: "7px 9px" }} />
-            {imageUploading && <div className="f-mono" style={{ fontSize: 11, color: C.soil, opacity: 0.6, marginTop: 6 }}>Uploading…</div>}
+            {imageUploading && <div className="f-mono" style={{ fontSize: 11, color: C.soil, opacity: 0.6, marginTop: 6 }}>Uploading鈥�</div>}
             {newsImageUrl && !imageUploading && (
               <div style={{ marginTop: 8, position: "relative", display: "inline-block" }}>
                 <img src={newsImageUrl} alt="" style={{ width: 100, height: 70, objectFit: "cover", borderRadius: 8, border: `1px solid ${C.line}` }} />
-                <button onClick={() => setNewsImageUrl("")} style={{ position: "absolute", top: -6, right: -6, background: C.rust, border: "none", borderRadius: 999, width: 18, height: 18, color: C.chalk, cursor: "pointer", fontSize: 11, lineHeight: 1 }}>×</button>
+                <button onClick={() => setNewsImageUrl("")} style={{ position: "absolute", top: -6, right: -6, background: C.rust, border: "none", borderRadius: 999, width: 18, height: 18, color: C.chalk, cursor: "pointer", fontSize: 11, lineHeight: 1 }}>脳</button>
               </div>
             )}
           </Field>
-          <Field label="Body — separate paragraphs with a blank line">
+          <Field label="Body 鈥� separate paragraphs with a blank line">
             <textarea style={{ ...inputStyle, minHeight: 140, resize: "vertical" }} value={newsBody} onChange={(e) => setNewsBody(e.target.value)} />
           </Field>
           <button onClick={addNews} style={btnStyle(C.ochre, C.chalk)}><Plus size={14} /> Publish</button>
@@ -3164,15 +3164,15 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
             <Field label="Website / page to open on tap (optional)"><input style={inputStyle} placeholder="https://..." value={sponsorUrl} onChange={(e) => setSponsorUrl(e.target.value)} /></Field>
             <Field label="Logo (optional)">
               <input type="file" accept="image/*" onChange={handleSponsorLogoSelect} style={{ ...inputStyle, padding: "7px 9px" }} />
-              {sponsorLogoUploading && <div className="f-mono" style={{ fontSize: 11, color: C.soil, opacity: 0.6, marginTop: 6 }}>Uploading…</div>}
+              {sponsorLogoUploading && <div className="f-mono" style={{ fontSize: 11, color: C.soil, opacity: 0.6, marginTop: 6 }}>Uploading鈥�</div>}
               {sponsorLogoUrl && !sponsorLogoUploading && (
                 <div style={{ marginTop: 8, position: "relative", display: "inline-block" }}>
                   <img src={sponsorLogoUrl} alt="" style={{ width: 60, height: 60, objectFit: "contain", borderRadius: 8, border: `1px solid ${C.line}`, background: C.sand || "#F2E9D8" }} />
-                  <button onClick={() => setSponsorLogoUrl("")} style={{ position: "absolute", top: -6, right: -6, background: C.rust, border: "none", borderRadius: 999, width: 18, height: 18, color: C.chalk, cursor: "pointer", fontSize: 11, lineHeight: 1 }}>×</button>
+                  <button onClick={() => setSponsorLogoUrl("")} style={{ position: "absolute", top: -6, right: -6, background: C.rust, border: "none", borderRadius: 999, width: 18, height: 18, color: C.chalk, cursor: "pointer", fontSize: 11, lineHeight: 1 }}>脳</button>
                 </div>
               )}
             </Field>
-            <button onClick={addSponsor} disabled={sponsorLogoUploading} style={{ ...btnStyle(C.ochre, C.chalk), opacity: sponsorLogoUploading ? 0.5 : 1, cursor: sponsorLogoUploading ? "not-allowed" : "pointer" }}><Plus size={14} /> {sponsorLogoUploading ? "Uploading logo…" : "Add sponsor"}</button>
+            <button onClick={addSponsor} disabled={sponsorLogoUploading} style={{ ...btnStyle(C.ochre, C.chalk), opacity: sponsorLogoUploading ? 0.5 : 1, cursor: sponsorLogoUploading ? "not-allowed" : "pointer" }}><Plus size={14} /> {sponsorLogoUploading ? "Uploading logo鈥�" : "Add sponsor"}</button>
           </div>
         </div>
       </div>
@@ -3181,7 +3181,7 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
         <div className="f-mono" style={{ fontSize: 11, letterSpacing: 2, color: C.ochre, marginBottom: 10, fontWeight: 700 }}>ADVERTISEMENTS</div>
         <div style={{ background: C.chalk, borderRadius: 14, padding: 14, border: `1px solid ${C.line}` }}>
           <div className="f-body" style={{ fontSize: 11.5, color: C.soil, opacity: 0.6, marginBottom: 10, lineHeight: 1.4 }}>
-            Big rotating banner shown at the top of the app. Upload a poster/flyer-style image — full-width, landscape works best.
+            Big rotating banner shown at the top of the app. Upload a poster/flyer-style image 鈥� full-width, landscape works best.
           </div>
           {ads.map((a) => (
             <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: `1px solid ${C.line}` }}>
@@ -3200,15 +3200,15 @@ function AdminTab({ competitions, setCompetitions, activeCompetitionId, setActiv
             <Field label="Website / page to open on tap (optional)"><input style={inputStyle} placeholder="https://..." value={adUrl} onChange={(e) => setAdUrl(e.target.value)} /></Field>
             <Field label="Ad image">
               <input type="file" accept="image/*" onChange={handleAdImageSelect} style={{ ...inputStyle, padding: "7px 9px" }} />
-              {adImageUploading && <div className="f-mono" style={{ fontSize: 11, color: C.soil, opacity: 0.6, marginTop: 6 }}>Uploading…</div>}
+              {adImageUploading && <div className="f-mono" style={{ fontSize: 11, color: C.soil, opacity: 0.6, marginTop: 6 }}>Uploading鈥�</div>}
               {adImageUrl && !adImageUploading && (
                 <div style={{ marginTop: 8, position: "relative", display: "inline-block" }}>
                   <img src={adImageUrl} alt="" style={{ width: 140, height: 60, objectFit: "contain", borderRadius: 8, border: `1px solid ${C.line}`, background: C.sand || "#F2E9D8" }} />
-                  <button onClick={() => setAdImageUrl("")} style={{ position: "absolute", top: -6, right: -6, background: C.rust, border: "none", borderRadius: 999, width: 18, height: 18, color: C.chalk, cursor: "pointer", fontSize: 11, lineHeight: 1 }}>×</button>
+                  <button onClick={() => setAdImageUrl("")} style={{ position: "absolute", top: -6, right: -6, background: C.rust, border: "none", borderRadius: 999, width: 18, height: 18, color: C.chalk, cursor: "pointer", fontSize: 11, lineHeight: 1 }}>脳</button>
                 </div>
               )}
             </Field>
-            <button onClick={addAd} disabled={adImageUploading} style={{ ...btnStyle(C.ochre, C.chalk), opacity: adImageUploading ? 0.5 : 1, cursor: adImageUploading ? "not-allowed" : "pointer" }}><Plus size={14} /> {adImageUploading ? "Uploading image…" : "Add advertisement"}</button>
+            <button onClick={addAd} disabled={adImageUploading} style={{ ...btnStyle(C.ochre, C.chalk), opacity: adImageUploading ? 0.5 : 1, cursor: adImageUploading ? "not-allowed" : "pointer" }}><Plus size={14} /> {adImageUploading ? "Uploading image鈥�" : "Add advertisement"}</button>
           </div>
         </div>
       </div>
@@ -3266,7 +3266,7 @@ export default function AuyoFootballApp() {
   }, []);
 
   // Applies a navigation state to the screen. This is the one place that
-  // actually changes which screen is showing — both normal in-app taps and
+  // actually changes which screen is showing 鈥� both normal in-app taps and
   // the browser/hardware back button funnel through here, so the two never
   // fall out of sync.
   const applyNavState = useCallback((state) => {
@@ -3296,7 +3296,7 @@ export default function AuyoFootballApp() {
     applyNavState(newState);
   }, [applyNavState]);
 
-  // Every "✕ Close" button uses this too, so an in-app close button and the
+  // Every "鉁� Close" button uses this too, so an in-app close button and the
   // phone's own back button always behave identically.
   const goBack = useCallback(() => {
     window.history.back();
@@ -3334,7 +3334,7 @@ export default function AuyoFootballApp() {
   useEffect(() => {
     (async () => {
       try {
-        // Fetch everything at once instead of one-at-a-time — with 8 separate
+        // Fetch everything at once instead of one-at-a-time 鈥� with 8 separate
         // documents, doing this sequentially meant every visitor waited for
         // 8 full network round-trips in a row before seeing anything.
         const [comps0, t0, m0, n0, sp0, ad0, pl0, tr0, ref0] = await Promise.all([
@@ -3458,7 +3458,7 @@ export default function AuyoFootballApp() {
   ];
 
   // Swiping left/right moves between the main bottom-nav tabs. Only active
-  // when actually on one of those tabs — inside a drill-down screen (a team,
+  // when actually on one of those tabs 鈥� inside a drill-down screen (a team,
   // competition, match, etc.) a swipe shouldn't unexpectedly jump elsewhere.
   const touchStartXRef = useRef(null);
   const touchStartYRef = useRef(null);
@@ -3512,14 +3512,14 @@ export default function AuyoFootballApp() {
           <div style={{ marginTop: 20 }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
             {saveError && (
               <div className="f-body" style={{ background: C.rust, color: C.chalk, fontSize: 12, padding: "8px 12px", borderRadius: 10, marginBottom: 12, textAlign: "center" }}>
-                ⚠ Couldn't save your last change — check your connection or Firestore rules.
+                鈿� Couldn't save your last change 鈥� check your connection or Firestore rules.
               </div>
             )}
             {loading ? (
-              <div className="f-body" style={{ color: C.chalk, opacity: 0.6, textAlign: "center", marginTop: 40 }}>Loading fixtures…</div>
+              <div className="f-body" style={{ color: C.chalk, opacity: 0.6, textAlign: "center", marginTop: 40 }}>Loading fixtures鈥�</div>
             ) : loadError ? (
               <div className="f-body" style={{ color: C.chalk, opacity: 0.85, textAlign: "center", marginTop: 40, padding: "0 12px", lineHeight: 1.5 }}>
-                ⚠ Couldn't load live data. This usually means the Firestore database rules are blocking access (test mode expires after 30 days). Fix the rules in your Firebase console, then reload this page — your data hasn't been deleted, it just couldn't be reached.
+                鈿� Couldn't load live data. This usually means the Firestore database rules are blocking access (test mode expires after 30 days). Fix the rules in your Firebase console, then reload this page 鈥� your data hasn't been deleted, it just couldn't be reached.
               </div>
             ) : (
               <>
