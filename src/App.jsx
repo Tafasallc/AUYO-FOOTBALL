@@ -2444,7 +2444,6 @@ const FORMATIONS = {
     { key: "rs", label: "RS", row: "fwd" },
   ],
 };
-
 function LineupRow({ match, updateMatch, players }) {
   const teamARoster = players.filter((player) =>
     playerTeamIds(player).includes(match.teamAId)
