@@ -458,66 +458,264 @@ function CompactMatchRow({ match, teamName, teamBadge, onOpenMatch }) {
   );
 }
 
-function MatchesTab({ matches, teamName, teamBadge, teamGroup, competitions, votedMatches, onVote, onTeamTap, onCompetitionTap, onOpenMatch }) {
-  const today = new Date().toISOString().slice(0, 10);
+function MatchesTab({
+  matches,
+  teamName,
+  teamBadge,
+  teamGroup,
+  competitions,
+  votedMatches,
+  onVote,
+  onTeamTap,
+  onCompetitionTap,
+  onOpenMatch,
+}) {
+  const today = new Date();
 
-  const getCompetitionName = (id) => {
-    if (!id) return "Friendly";
-    return competitions.find((c) => c.id === id)?.name || "Friendly";
+  const dateKey = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
   };
 
-  const todaysMatches = matches.filter((m) => m.date === today);
-  const otherFriendlies = matches.filter((m) => !m.competitionId && m.date !== today);
+  const dayLabel = (date, index) => {
+    if (index === 0) return "YESTERDAY";
+    if (index === 1) return "TODAY";
+    if (index === 2) return "TOMORROW";
 
-  const groupedToday = {};
-  todaysMatches.forEach((m) => {
-    const k = m.competitionId || "friendly";
-    if (!groupedToday[k]) groupedToday[k] = [];
-    groupedToday[k].push(m);
+    return date
+      .toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+      })
+      .toUpperCase();
+  };
+
+  // Seven calendar-day tabs: yesterday, today, tomorrow, and four more days.
+  const days = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(today);
+    date.setHours(0, 0, 0, 0);
+    date.setDate(today.getDate() - 1 + index);
+    return date;
   });
-  const groupKeys = Object.keys(groupedToday);
+
+  const dayTabs = days.map((date, index) => ({
+    key: `day-${index}`,
+    label: dayLabel(date, index),
+    date,
+  }));
+
+  // The Live tab sits directly after Today.
+  const liveCount = matches.filter((match) => match.status === "live").length;
+
+  const tabs = [
+    dayTabs[0],
+    dayTabs[1],
+    { key: "live", label: `LIVE (${liveCount})` },
+    ...dayTabs.slice(2),
+  ];
+
+  // Today is the default selected tab.
+  const [selectedTab, setSelectedTab] = useState("day-1");
+
+  const swipeTabs = useSwipeTabs(
+    tabs.map((tab) => tab.key),
+    selectedTab,
+    setSelectedTab
+  );
+
+  const activeTab = tabs.find((tab) => tab.key === selectedTab) || dayTabs[1];
+
+  const getCompetitionName = (competitionId) => {
+    if (!competitionId) return "Friendly";
+
+    return (
+      competitions.find((competition) => competition.id === competitionId)
+        ?.name || "Friendly"
+    );
+  };
+
+  const visibleMatches =
+    selectedTab === "live"
+      ? matches.filter((match) => match.status === "live")
+      : matches.filter((match) => match.date === dateKey(activeTab.date));
+
+  const groupedMatches = {};
+
+  visibleMatches.forEach((match) => {
+    const key = match.competitionId || "friendly";
+
+    if (!groupedMatches[key]) {
+      groupedMatches[key] = [];
+    }
+
+    groupedMatches[key].push(match);
+  });
+
+  const groupKeys = Object.keys(groupedMatches);
 
   const renderGroupCard = (list) => (
-    <div style={{ background: C.chalk, borderRadius: 12, overflow: "hidden", border: `1px solid ${C.line}` }}>
-      {list.map((m) => <CompactMatchRow key={m.id} match={m} teamName={teamName} teamBadge={teamBadge} onOpenMatch={onOpenMatch} />)}
+    <div
+      style={{
+        background: C.chalk,
+        borderRadius: 12,
+        overflow: "hidden",
+        border: `1px solid ${C.line}`,
+      }}
+    >
+      {list.map((match) => (
+        <CompactMatchRow
+          key={match.id}
+          match={match}
+          teamName={teamName}
+          teamBadge={teamBadge}
+          onOpenMatch={onOpenMatch}
+        />
+      ))}
     </div>
   );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 22, paddingBottom: 90 }}>
+    <div
+      {...swipeTabs}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 18,
+        paddingBottom: 90,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          gap: 12,
+          overflowX: "auto",
+          margin: "0 -18px",
+          padding: "0 18px 8px",
+          scrollbarWidth: "none",
+        }}
+      >
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setSelectedTab(tab.key)}
+            style={{
+              flexShrink: 0,
+              border: "none",
+              borderBottom:
+                selectedTab === tab.key
+                  ? `3px solid ${C.ochre}`
+                  : "3px solid transparent",
+              background: "none",
+              padding: "6px 2px 8px",
+              color:
+                selectedTab === tab.key
+                  ? C.chalk
+                  : "rgba(255,255,255,0.65)",
+              fontFamily: "'Work Sans', sans-serif",
+              fontSize: 12.5,
+              fontWeight: 700,
+              cursor: "pointer",
+              letterSpacing: 0.3,
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div>
-        <div className="f-mono" style={{ fontSize: 11, letterSpacing: 2, color: C.ochre, marginBottom: 10, fontWeight: 700 }}>TODAY'S MATCHES</div>
+        <div
+          className="f-mono"
+          style={{
+            fontSize: 11,
+            letterSpacing: 2,
+            color: C.ochre,
+            marginBottom: 10,
+            fontWeight: 700,
+          }}
+        >
+          {selectedTab === "live"
+            ? "LIVE MATCHES"
+            : `${activeTab.label} MATCHES`}
+        </div>
+
         {groupKeys.length === 0 && (
-          <div className="f-body" style={{ color: C.chalk, opacity: 0.6, textAlign: "center", marginTop: 20, fontSize: 13 }}>
-            No matches today. Search for a competition or team to see their full schedule.
+          <div
+            className="f-body"
+            style={{
+              color: C.chalk,
+              opacity: 0.6,
+              textAlign: "center",
+              marginTop: 20,
+              fontSize: 13,
+            }}
+          >
+            No matches for this tab.
           </div>
         )}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {groupKeys.map((k) => {
-            const isFriendlyGroup = k === "friendly";
-            const label = isFriendlyGroup ? "Friendly" : getCompetitionName(k);
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 14,
+          }}
+        >
+          {groupKeys.map((key) => {
+            const isFriendly = key === "friendly";
+            const label = isFriendly
+              ? "Friendly"
+              : getCompetitionName(key);
+
             return (
-              <div key={k}>
+              <div key={key}>
                 <div
-                  onClick={() => !isFriendlyGroup && onCompetitionTap && onCompetitionTap(k)}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", background: "rgba(255,255,255,0.06)", borderRadius: "12px 12px 0 0", cursor: !isFriendlyGroup && onCompetitionTap ? "pointer" : "default" }}
+                  onClick={() =>
+                    !isFriendly &&
+                    onCompetitionTap &&
+                    onCompetitionTap(key)
+                  }
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "9px 12px",
+                    background: "rgba(255,255,255,0.06)",
+                    borderRadius: "12px 12px 0 0",
+                    cursor:
+                      !isFriendly && onCompetitionTap
+                        ? "pointer"
+                        : "default",
+                  }}
                 >
-                  <span className="f-body" style={{ fontSize: 12.5, fontWeight: 700, color: C.chalk }}>{label.toUpperCase()}</span>
-                  {!isFriendlyGroup && <ChevronRight size={14} color={C.chalk} style={{ opacity: 0.5 }} />}
+                  <span
+                    className="f-body"
+                    style={{
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      color: C.chalk,
+                    }}
+                  >
+                    {label.toUpperCase()}
+                  </span>
+
+                  {!isFriendly && (
+                    <ChevronRight
+                      size={14}
+                      color={C.chalk}
+                      style={{ opacity: 0.5 }}
+                    />
+                  )}
                 </div>
-                {renderGroupCard(groupedToday[k])}
+
+                {renderGroupCard(groupedMatches[key])}
               </div>
             );
           })}
         </div>
       </div>
-
-      {otherFriendlies.length > 0 && (
-        <div>
-          <div className="f-mono" style={{ fontSize: 11, letterSpacing: 2, color: C.ochre, marginBottom: 10, fontWeight: 700 }}>OTHER FRIENDLIES</div>
-          {renderGroupCard(otherFriendlies)}
-        </div>
-      )}
     </div>
   );
 }
@@ -902,11 +1100,22 @@ function PlayerProfile({ player, team, matches, onClose }) {
   );
 }
 
+function computeRefereeStats(matches, refereeId) {
+  const officiated = matches.filter((m) => m.refereeId === refereeId && m.status === "finished");
+  return {
+    matches: officiated.length,
+    penalties: officiated.reduce((n, m) => n + (Array.isArray(m.penalties) ? m.penalties.length : Number(m.penalties || m.penaltyKicks || 0)), 0),
+    yellowCards: officiated.reduce((n, m) => n + (m.cards || []).filter((c) => c.type === "yellow").length, 0),
+    redCards: officiated.reduce((n, m) => n + (m.cards || []).filter((c) => c.type === "red").length, 0),
+  };
+}
+
 function RefereeProfile({ referee, matches, teamName, onClose }) {
   if (!referee) return null;
   const officiated = matches
     .filter((m) => m.refereeId === referee.id && m.status === "finished")
     .sort((a, b) => (a.date < b.date ? 1 : -1));
+  const stats = computeRefereeStats(matches, referee.id);
 
   return (
     <div style={{ paddingBottom: 90 }}>
@@ -915,6 +1124,23 @@ function RefereeProfile({ referee, matches, teamName, onClose }) {
           <span className="f-body" style={{ fontSize: 12, fontWeight: 700, color: C.chalk }}>✕ Close</span>
         </button>
       </div>
+
+      {/* Stats row */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 14 }}>
+        {[
+          ["MATCHES", stats.matches],
+          ["PENALTIES", stats.penalties],
+          ["YELLOW", stats.yellowCards],
+          ["RED", stats.redCards],
+        ].map(([label, value]) => (
+          <div key={label} style={{ background: C.chalk, borderRadius: 12, padding: "12px 5px", textAlign: "center", border: `1px solid ${C.line}` }}>
+            <div className="f-display" style={{ fontSize: 20, color: label === "RED" ? C.rust : C.pitch }}>{value}</div>
+            <div className="f-mono" style={{ fontSize: 8.5, color: C.soil, opacity: 0.6, marginTop: 3 }}>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Existing profile card */}
       <div style={{ background: C.chalk, borderRadius: 16, padding: 24, textAlign: "center", border: `1px solid ${C.line}`, marginBottom: 14 }}>
         {referee.photoUrl ? (
           <img src={referee.photoUrl} alt="" style={{ width: 110, height: 110, borderRadius: 999, objectFit: "cover", border: `3px solid ${C.ochre}`, marginBottom: 14 }} />
@@ -926,12 +1152,13 @@ function RefereeProfile({ referee, matches, teamName, onClose }) {
         <div className="f-display" style={{ fontSize: 22, color: C.pitch, marginBottom: 4 }}>{referee.name}</div>
         <div className="f-mono" style={{ fontSize: 10.5, color: C.soil, opacity: 0.5, letterSpacing: 0.5 }}>MATCH OFFICIAL</div>
       </div>
+
       {officiated.length > 0 && (
         <div style={{ background: C.chalk, borderRadius: 14, padding: 14, border: `1px solid ${C.line}` }}>
           <div className="f-mono" style={{ fontSize: 10, letterSpacing: 1.5, color: C.ochre, marginBottom: 10, fontWeight: 700 }}>MATCHES OFFICIATED</div>
           {officiated.map((m) => (
             <div key={m.id} className="f-body" style={{ fontSize: 12.5, color: C.soil, padding: "6px 0", borderBottom: `1px solid ${C.line}` }}>
-              {teamName(m.teamAId)} {m.scoreA}–{m.scoreB} {teamName(m.teamBId)}
+              {teamName(m.teamAId)} {m.scoreA}-{m.scoreB} {teamName(m.teamBId)}
               <span className="f-mono" style={{ fontSize: 10, opacity: 0.5, marginLeft: 8 }}>{m.date}</span>
             </div>
           ))}
