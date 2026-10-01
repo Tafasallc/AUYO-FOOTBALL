@@ -2331,66 +2331,457 @@ function CardsRow({ match, updateMatch }) {
   );
 }
 
+const FORMATIONS = {
+  "4-4-2": [
+    { key: "gk", label: "GK", row: "gk" },
+    { key: "lb", label: "LB", row: "def" },
+    { key: "lcb", label: "LCB", row: "def" },
+    { key: "rcb", label: "RCB", row: "def" },
+    { key: "rb", label: "RB", row: "def" },
+    { key: "lm", label: "LM", row: "mid" },
+    { key: "lcm", label: "LCM", row: "mid" },
+    { key: "rcm", label: "RCM", row: "mid" },
+    { key: "rm", label: "RM", row: "mid" },
+    { key: "ls", label: "LS", row: "fwd" },
+    { key: "rs", label: "RS", row: "fwd" },
+  ],
+
+  "4-3-3": [
+    { key: "gk", label: "GK", row: "gk" },
+    { key: "lb", label: "LB", row: "def" },
+    { key: "lcb", label: "LCB", row: "def" },
+    { key: "rcb", label: "RCB", row: "def" },
+    { key: "rb", label: "RB", row: "def" },
+    { key: "lcm", label: "LCM", row: "mid" },
+    { key: "cm", label: "CM", row: "mid" },
+    { key: "rcm", label: "RCM", row: "mid" },
+    { key: "lw", label: "LW", row: "fwd" },
+    { key: "st", label: "ST", row: "fwd" },
+    { key: "rw", label: "RW", row: "fwd" },
+  ],
+
+  "3-5-2": [
+    { key: "gk", label: "GK", row: "gk" },
+    { key: "lcb", label: "LCB", row: "def" },
+    { key: "cb", label: "CB", row: "def" },
+    { key: "rcb", label: "RCB", row: "def" },
+    { key: "lwb", label: "LWB", row: "mid" },
+    { key: "lcm", label: "LCM", row: "mid" },
+    { key: "cm", label: "CM", row: "mid" },
+    { key: "rcm", label: "RCM", row: "mid" },
+    { key: "rwb", label: "RWB", row: "mid" },
+    { key: "ls", label: "LS", row: "fwd" },
+    { key: "rs", label: "RS", row: "fwd" },
+  ],
+
+  "4-4-1-1": [
+    { key: "gk", label: "GK", row: "gk" },
+    { key: "lb", label: "LB", row: "def" },
+    { key: "lcb", label: "LCB", row: "def" },
+    { key: "rcb", label: "RCB", row: "def" },
+    { key: "rb", label: "RB", row: "def" },
+    { key: "lm", label: "LM", row: "mid" },
+    { key: "lcm", label: "LCM", row: "mid" },
+    { key: "rcm", label: "RCM", row: "mid" },
+    { key: "rm", label: "RM", row: "mid" },
+    { key: "ss", label: "SS", row: "fwd" },
+    { key: "st", label: "ST", row: "fwd" },
+  ],
+
+  "3-4-3": [
+    { key: "gk", label: "GK", row: "gk" },
+    { key: "lcb", label: "LCB", row: "def" },
+    { key: "cb", label: "CB", row: "def" },
+    { key: "rcb", label: "RCB", row: "def" },
+    { key: "lm", label: "LM", row: "mid" },
+    { key: "lcm", label: "LCM", row: "mid" },
+    { key: "rcm", label: "RCM", row: "mid" },
+    { key: "rm", label: "RM", row: "mid" },
+    { key: "lw", label: "LW", row: "fwd" },
+    { key: "st", label: "ST", row: "fwd" },
+    { key: "rw", label: "RW", row: "fwd" },
+  ],
+
+  "4-2-3-1": [
+    { key: "gk", label: "GK", row: "gk" },
+    { key: "lb", label: "LB", row: "def" },
+    { key: "lcb", label: "LCB", row: "def" },
+    { key: "rcb", label: "RCB", row: "def" },
+    { key: "rb", label: "RB", row: "def" },
+    { key: "ldm", label: "LDM", row: "mid" },
+    { key: "rdm", label: "RDM", row: "mid" },
+    { key: "lw", label: "LW", row: "mid" },
+    { key: "cam", label: "CAM", row: "mid" },
+    { key: "rw", label: "RW", row: "mid" },
+    { key: "st", label: "ST", row: "fwd" },
+  ],
+
+  "4-5-1": [
+    { key: "gk", label: "GK", row: "gk" },
+    { key: "lb", label: "LB", row: "def" },
+    { key: "lcb", label: "LCB", row: "def" },
+    { key: "rcb", label: "RCB", row: "def" },
+    { key: "rb", label: "RB", row: "def" },
+    { key: "lm", label: "LM", row: "mid" },
+    { key: "lcm", label: "LCM", row: "mid" },
+    { key: "cm", label: "CM", row: "mid" },
+    { key: "rcm", label: "RCM", row: "mid" },
+    { key: "rm", label: "RM", row: "mid" },
+    { key: "st", label: "ST", row: "fwd" },
+  ],
+
+  "5-3-2": [
+    { key: "gk", label: "GK", row: "gk" },
+    { key: "lwb", label: "LWB", row: "def" },
+    { key: "lcb", label: "LCB", row: "def" },
+    { key: "cb", label: "CB", row: "def" },
+    { key: "rcb", label: "RCB", row: "def" },
+    { key: "rwb", label: "RWB", row: "def" },
+    { key: "lcm", label: "LCM", row: "mid" },
+    { key: "cm", label: "CM", row: "mid" },
+    { key: "rcm", label: "RCM", row: "mid" },
+    { key: "ls", label: "LS", row: "fwd" },
+    { key: "rs", label: "RS", row: "fwd" },
+  ],
+};
+
 function LineupRow({ match, updateMatch, players }) {
-  const teamARoster = players.filter((p) => playerTeamIds(p).includes(match.teamAId));
-  const teamBRoster = players.filter((p) => playerTeamIds(p).includes(match.teamBId));
-  const entriesA = ((match.lineups && match.lineups.teamA) || []).map(normalizeLineupEntry);
-  const entriesB = ((match.lineups && match.lineups.teamB) || []).map(normalizeLineupEntry);
-
-  const setStatus = (side, player, status) => {
-    const key = side === "A" ? "teamA" : "teamB";
-    const current = ((match.lineups && match.lineups[key]) || []).map(normalizeLineupEntry);
-    const withoutPlayer = current.filter((e) => e.id !== player.id);
-    const next = status === "out" ? withoutPlayer : [...withoutPlayer, { id: player.id, row: positionRow(player.position), sub: status === "sub" }];
-    updateMatch(match.id, { lineups: { ...(match.lineups || {}), [key]: next } });
-  };
-
-  const setRow = (side, playerId, row) => {
-    const key = side === "A" ? "teamA" : "teamB";
-    const current = ((match.lineups && match.lineups[key]) || []).map(normalizeLineupEntry);
-    updateMatch(match.id, { lineups: { ...(match.lineups || {}), [key]: current.map((e) => (e.id === playerId ? { ...e, row } : e)) } });
-  };
-
-  const Side = ({ label, roster, entries, side }) => (
-    <div style={{ flex: 1 }}>
-      <div className="f-mono" style={{ fontSize: 9.5, opacity: 0.5, color: C.soil, marginBottom: 4 }}>{label}</div>
-      {roster.length === 0 && <div className="f-body" style={{ fontSize: 11, color: C.soil, opacity: 0.5 }}>No roster on file.</div>}
-      {roster.map((p) => {
-        const entry = entries.find((e) => e.id === p.id);
-        const status = !entry ? "out" : entry.sub ? "sub" : "start";
-        return (
-          <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 0", flexWrap: "wrap" }}>
-            <span className="f-body" style={{ fontSize: 12, color: C.soil, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {p.name}{p.number ? ` #${p.number}` : ""}
-            </span>
-            <select
-              value={status}
-              onChange={(e) => setStatus(side, p, e.target.value)}
-              style={{ fontSize: 10, padding: "2px 3px", borderRadius: 6, border: `1px solid ${C.line}`, flexShrink: 0 }}
-            >
-              <option value="out">Not in squad</option>
-              <option value="start">Starting</option>
-              <option value="sub">Substitute</option>
-            </select>
-            {status === "start" && (
-              <select
-                value={entry.row || positionRow(p.position)}
-                onChange={(e) => setRow(side, p.id, e.target.value)}
-                style={{ fontSize: 10, padding: "2px 3px", borderRadius: 6, border: `1px solid ${C.line}`, flexShrink: 0 }}
-              >
-                <option value="gk">GK</option>
-                <option value="def">DEF</option>
-                <option value="mid">MID</option>
-                <option value="fwd">FWD</option>
-              </select>
-            )}
-          </div>
-        );
-      })}
-    </div>
+  const teamARoster = players.filter((player) =>
+    playerTeamIds(player).includes(match.teamAId)
   );
 
+  const teamBRoster = players.filter((player) =>
+    playerTeamIds(player).includes(match.teamBId)
+  );
+
+  const entriesA = (match.lineups?.teamA || []).map(normalizeLineupEntry);
+  const entriesB = (match.lineups?.teamB || []).map(normalizeLineupEntry);
+
+  const formationA = match.formationA || "4-4-2";
+  const formationB = match.formationB || "4-4-2";
+
+  const slotsFor = (side) =>
+    FORMATIONS[side === "A" ? formationA : formationB] || FORMATIONS["4-4-2"];
+
+  const setFormation = (side, formation) => {
+    const key = side === "A" ? "formationA" : "formationB";
+    const lineupKey = side === "A" ? "teamA" : "teamB";
+    const slots = FORMATIONS[formation] || FORMATIONS["4-4-2"];
+
+    const currentEntries = (match.lineups?.[lineupKey] || []).map(
+      normalizeLineupEntry
+    );
+
+    // Keep selected players in the starting XI, but remove their old slot
+    // assignments so the organizer can assign slots in the new formation.
+    const updatedEntries = currentEntries.map((entry) => {
+      if (entry.sub) return entry;
+
+      const stillValid = slots.some((slot) => slot.key === entry.slot);
+
+      return {
+        ...entry,
+        row: stillValid
+          ? slots.find((slot) => slot.key === entry.slot)?.row
+          : entry.row,
+        slot: stillValid ? entry.slot : "",
+      };
+    });
+
+    updateMatch(match.id, {
+      [key]: formation,
+      lineups: {
+        ...(match.lineups || {}),
+        [lineupKey]: updatedEntries,
+      },
+    });
+  };
+
+  const setStatus = (side, player, status) => {
+    const lineupKey = side === "A" ? "teamA" : "teamB";
+    const currentEntries = (match.lineups?.[lineupKey] || []).map(
+      normalizeLineupEntry
+    );
+
+    const withoutPlayer = currentEntries.filter(
+      (entry) => entry.id !== player.id
+    );
+
+    if (status === "out") {
+      updateMatch(match.id, {
+        lineups: {
+          ...(match.lineups || {}),
+          [lineupKey]: withoutPlayer,
+        },
+      });
+      return;
+    }
+
+    const isSub = status === "sub";
+    const firstAvailableSlot = isSub
+      ? ""
+      : slotsFor(side).find(
+          (slot) =>
+            !withoutPlayer.some(
+              (entry) => !entry.sub && entry.slot === slot.key
+            )
+        )?.key || "";
+
+    const slot = isSub
+      ? null
+      : slotsFor(side).find((item) => item.key === firstAvailableSlot);
+
+    updateMatch(match.id, {
+      lineups: {
+        ...(match.lineups || {}),
+        [lineupKey]: [
+          ...withoutPlayer,
+          {
+            id: player.id,
+            sub: isSub,
+            row: isSub ? "sub" : slot?.row || positionRow(player.position),
+            slot: isSub ? null : firstAvailableSlot,
+          },
+        ],
+      },
+    });
+  };
+
+  const setSlot = (side, playerId, slotKey) => {
+    const lineupKey = side === "A" ? "teamA" : "teamB";
+    const slots = slotsFor(side);
+    const slot = slots.find((item) => item.key === slotKey);
+
+    const currentEntries = (match.lineups?.[lineupKey] || []).map(
+      normalizeLineupEntry
+    );
+
+    // A formation slot can only contain one starter. If it is occupied,
+    // clear it first before assigning the newly selected player.
+    const cleared = currentEntries.map((entry) =>
+      entry.id !== playerId && !entry.sub && entry.slot === slotKey
+        ? { ...entry, slot: "", row: entry.row }
+        : entry
+    );
+
+    updateMatch(match.id, {
+      lineups: {
+        ...(match.lineups || {}),
+        [lineupKey]: cleared.map((entry) =>
+          entry.id === playerId
+            ? { ...entry, slot: slotKey, row: slot?.row || entry.row }
+            : entry
+        ),
+      },
+    });
+  };
+
+  const Side = ({ side, label, roster, entries, formation }) => {
+    const slots = slotsFor(side);
+    const starters = entries.filter((entry) => !entry.sub);
+
+    return (
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          className="f-mono"
+          style={{
+            fontSize: 9.5,
+            opacity: 0.5,
+            color: C.soil,
+            marginBottom: 4,
+          }}
+        >
+          {label}
+        </div>
+
+        <select
+          value={formation}
+          onChange={(event) => setFormation(side, event.target.value)}
+          style={{
+            ...inputStyle,
+            fontSize: 11,
+            padding: "6px 7px",
+            marginBottom: 8,
+          }}
+        >
+          {Object.keys(FORMATIONS).map((formationName) => (
+            <option key={formationName} value={formationName}>
+              {formationName}
+            </option>
+          ))}
+        </select>
+
+        <div
+          className="f-mono"
+          style={{
+            fontSize: 9,
+            color: C.soil,
+            opacity: 0.45,
+            marginBottom: 6,
+          }}
+        >
+          STARTERS: {starters.length}/11
+        </div>
+
+        {roster.length === 0 && (
+          <div
+            className="f-body"
+            style={{ fontSize: 11, color: C.soil, opacity: 0.5 }}
+          >
+            No roster on file.
+          </div>
+        )}
+
+        {roster.map((player) => {
+          const entry = entries.find((item) => item.id === player.id);
+          const status = !entry ? "out" : entry.sub ? "sub" : "start";
+
+          return (
+            <div
+              key={player.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "4px 0",
+                flexWrap: "wrap",
+              }}
+            >
+              <span
+                className="f-body"
+                style={{
+                  fontSize: 12,
+                  color: C.soil,
+                  flex: 1,
+                  minWidth: 0,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {player.name}
+                {player.number ? ` #${player.number}` : ""}
+              </span>
+
+              <select
+                value={status}
+                onChange={(event) =>
+                  setStatus(side, player, event.target.value)
+                }
+                style={{
+                  fontSize: 10,
+                  padding: "3px",
+                  borderRadius: 6,
+                  border: `1px solid ${C.line}`,
+                  flexShrink: 0,
+                }}
+              >
+                <option value="out">Not in squad</option>
+                <option value="start">Starting</option>
+                <option value="sub">Substitute</option>
+              </select>
+
+              {status === "start" && (
+                <select
+                  value={entry.slot || ""}
+                  onChange={(event) =>
+                    setSlot(side, player.id, event.target.value)
+                  }
+                  style={{
+                    fontSize: 10,
+                    padding: "3px",
+                    borderRadius: 6,
+                    border: `1px solid ${C.line}`,
+                    flexShrink: 0,
+                  }}
+                >
+                  <option value="">Choose role</option>
+
+                  {slots.map((slot) => {
+                    const occupiedByAnotherPlayer = entries.some(
+                      (otherEntry) =>
+                        otherEntry.id !== player.id &&
+                        !otherEntry.sub &&
+                        otherEntry.slot === slot.key
+                    );
+
+                    return (
+                      <option
+                        key={slot.key}
+                        value={slot.key}
+                        disabled={occupiedByAnotherPlayer}
+                      >
+                        {slot.label}
+                        {occupiedByAnotherPlayer ? " — used" : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
+    <div
+      style={{
+        marginTop: 8,
+        borderTop: `1px solid ${C.line}`,
+        paddingTop: 8,
+      }}
+    >
+      <div
+        className="f-mono"
+        style={{
+          fontSize: 10,
+          opacity: 0.5,
+          color: C.soil,
+          marginBottom: 6,
+        }}
+      >
+        LINEUPS
+      </div>
+
+      <div
+        className="f-body"
+        style={{
+          fontSize: 11,
+          color: C.soil,
+          opacity: 0.6,
+          marginBottom: 8,
+          lineHeight: 1.4,
+        }}
+      >
+        Select each team’s formation, set players as Starting or Substitute,
+        then assign every starter to a formation role. A role can only be used
+        by one player.
+      </div>
+
+      <div style={{ display: "flex", gap: 10 }}>
+        <Side
+          side="A"
+          label="HOME"
+          roster={teamARoster}
+          entries={entriesA}
+          formation={formationA}
+        />
+
+        <Side
+          side="B"
+          label="AWAY"
+          roster={teamBRoster}
+          entries={entriesB}
+          formation={formationB}
+        />
+      </div>
+    </div>
+  );
+}
+
+return (
     <div style={{ marginTop: 8, borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
       <div className="f-mono" style={{ fontSize: 10, opacity: 0.5, color: C.soil, marginBottom: 6 }}>LINEUPS — set each player as Starting or Substitute. Use the line dropdown for anyone playing out of their usual position.</div>
       <div style={{ display: "flex", gap: 10 }}>
